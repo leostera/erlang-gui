@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "native/skia",
+  "native/vulkan",
+  "native/winit",
+]

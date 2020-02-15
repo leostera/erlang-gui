@@ -1,11 +1,9 @@
-defmodule Vulkan.MixProject do
+defmodule HelloWorld.MixProject do
   use Mix.Project
-
-  @rustler_mode if Mix.env() == :prod, do: :release, else: :debug
 
   def project do
     [
-      app: :vulkan,
+      app: :hello_world,
       version: "0.1.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
@@ -13,11 +11,7 @@ defmodule Vulkan.MixProject do
       lockfile: "../../mix.lock",
       elixir: "~> 1.8",
       start_permanent: Mix.env() == :prod,
-      deps: deps(),
-      compilers: [:rustler] ++ Mix.compilers(),
-      rustler_crates: [
-        vulkan: [mode: @rustler_mode, path: "../../native/erlang-vulkan"]
-      ]
+      deps: deps()
     ]
   end
 

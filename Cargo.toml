@@ -1,6 +1,7 @@
 [workspace]
 members = [
-  "native/skia",
-  "native/vulkan",
-  "native/winit",
+  "native/erlang-etf",
+  "native/erlang-skia",
+  "native/erlang-vulkan",
+  "native/erlang-winit",
 ]

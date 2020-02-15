@@ -1,0 +1,15 @@
+[package]
+name = "erlang-etf"
+description = "A lightweight Erlang External Term Format encoder/decoder"
+version = "0.1.0"
+authors = ["Leandro Ostera <leandro@ostera.io>"]
+keywords = ["serialization", "encoding", "erlang", "bert", "term_to_binary", "binary_to_term", "interop"]
+edition = "2018"
+
+[lib]
+name = "erletf"
+path = "src/lib.rs"
+
+[dependencies]
+num = "0.2.1"
+byteorder = "1.3.4"

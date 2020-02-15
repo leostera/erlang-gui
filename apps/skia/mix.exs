@@ -16,7 +16,7 @@ defmodule Skia.MixProject do
       deps: deps(),
       compilers: [:rustler] ++ Mix.compilers(),
       rustler_crates: [
-        skia: [mode: @rustler_mode, path: "../../native/skia"]
+        skia: [mode: @rustler_mode, path: "../../native/erlang-skia"]
       ]
     ]
   end
@@ -24,14 +24,12 @@ defmodule Skia.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
-      mod: {Skia.Application, []}
+      extra_applications: [:logger]
     ]
   end
 
   defp deps do
     [
-      {:rustler, "0.21.0"}
     ]
   end
 end

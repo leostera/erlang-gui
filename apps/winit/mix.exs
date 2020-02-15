@@ -16,7 +16,7 @@ defmodule Winit.MixProject do
       deps: deps(),
       compilers: [:rustler] ++ Mix.compilers(),
       rustler_crates: [
-        winit: [mode: @rustler_mode, path: "../../native/winit"]
+        winit: [mode: @rustler_mode, path: "../../native/erlang-winit"]
       ]
     ]
   end
@@ -24,14 +24,12 @@ defmodule Winit.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
-      mod: {Winit.Application, []}
+      extra_applications: [:logger]
     ]
   end
 
   defp deps do
     [
-      {:rustler, "0.21.0"}
     ]
   end
 end

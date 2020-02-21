@@ -1,0 +1,13 @@
+[package]
+name = "erlang-binary-buffer"
+version = "0.1.0"
+authors = ["Leandro Ostera <leandro@ostera.io>"]
+edition = "2018"
+
+[lib]
+name = "erlbinbuf"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+rustler = "0.21.0"

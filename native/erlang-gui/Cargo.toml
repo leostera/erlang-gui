@@ -1,0 +1,19 @@
+[package]
+name = "erlang-gui"
+version = "0.1.0"
+authors = ["Leandro Ostera <leandro@ostera.io>"]
+edition = "2018"
+
+[[bin]]
+name = "chalk_port"
+path = "src/bin.rs"
+
+[dependencies]
+crossbeam = "0.7"
+crossbeam-utils = "0.7"
+rustler = { path = "/home/ostera/repos/github.com/rusterlium/rustler/rustler/" }
+lazy_static = "1.0"
+winit = "0.21.0"
+erlang-etf =  { path = "../erlang-etf" }
+skia-safe = { path = "/home/ostera/repos/github.com/rust-skia/rust-skia/skia-safe", features = ["vulkan"] }
+skulpin = { path = "/home/ostera/repos/github.com/aclysma/skulpin" }

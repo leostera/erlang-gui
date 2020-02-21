@@ -1,15 +1,15 @@
 [package]
-name = "skia"
+name = "erlang-skia"
 version = "0.1.0"
-authors = []
+authors = ["Leandro Ostera <leandro@ostera.io>"]
 edition = "2018"
 
 [lib]
-name = "skia"
+name = "erlskia"
 path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
 rustler = "0.21.0"
 lazy_static = "1.0"
-skia-safe = "0.26.1"
+skia-safe = { path = "/home/ostera/repos/github.com/rust-skia/rust-skia/skia-safe" }

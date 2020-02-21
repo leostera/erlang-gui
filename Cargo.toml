@@ -2,6 +2,6 @@
 members = [
   "native/erlang-etf",
   "native/erlang-skia",
-  "native/erlang-vulkan",
-  "native/erlang-winit",
+  "native/erlang-gui",
+  "native/erlang-binary-buffer",
 ]

@@ -2,102 +2,93 @@
 
 -compile([export_all]).
 
-quickstart() ->
-  {ok, Instance} = instance(),
-  {ok, EvLoop, Surface} = window(Instance),
-  {ok, DevAndQueues} = device_and_queue(Instance, Surface),
-  {ok, Buffer} = buffer(DevAndQueues),
-  {ok, Swapchain, Images} = swapchain(Instance, Surface, DevAndQueues),
-  {ok, Pipeline} = gfx_pipeline(),
-  {ok, CmdPool} = command_pool(),
+animate() -> animate(0, right).
+
+animate(X, right) when X > 2000 -> animate(X, left);
+animate(X, left ) when X < 0    -> animate(X, right);
+animate(X, right) -> draw(X), animate(X+10, right);
+animate(X, left ) -> draw(X), animate(X-10, left).
+
+draw(X) ->
+  Canvas = sk_canvas:new(1000, 1000),
+  sk_canvas:draw_color(Canvas, sk_color:cyan()),
+
+  Paint = sk_paint:new(),
+  sk_paint:set_stroke_width(Paint, 40.0),
+  sk_paint:set_color(Paint, sk_color:red()),
+  Rect = sk_rect:make_xywh(X, 700, 400, 600),
+  sk_canvas:draw_rect(Canvas, Rect, Paint),
+
+  Paint2 = sk_paint:new(),
+  sk_paint:set_color(Paint2, sk_color:blue()),
+  Font = sk_font:new([{size, 300.0}]),
+  Text = sk_text_blob:from_binary("Hello, Joe!", Font),
+  sk_canvas:draw_text_blob(Canvas, Text, 500, 350, Paint2),
+
+  Picture = sk_picture:from_canvas(Canvas),
+  Bytes = sk_picture:as_bytes(Picture),
+  chalk:render(Bytes),
+  timer:sleep(10).
 
 
-instance() ->
-  InstanceCreateInfo = vk_instance_create_info:new(),
-  vk_instance:create(InstanceCreateInfo).
+sample() ->
+  Canvas = sk_canvas:new(1000, 1000),
+  sk_canvas:draw_color(Canvas, sk_color:cyan()),
 
+  Paint = sk_paint:new(),
+  %sk_paint:set_style(sk_paint_style:stroke_style()),
+  sk_paint:set_stroke_width(Paint, 40.0),
+  sk_paint:set_color(Paint, sk_color:red()),
 
-window(Instance) ->
-  {ok, EvLoop} = wn_event_loop:create(),
-  B0 = wn_window_builder:new(),
-  B1 = wn_window_builder:with_title("Hello Joe", B0),
-  B2 = wn_window_builder:with_dimensions({1024,786}, B1),
-  {ok, Surface} = wn_window_builder:build_vulkan_surface(Instance, EvLoop, B2),
-  {ok, EvLoop, Surface}
+  Rect = sk_rect:make_xywh(500, 700, 400, 600),
+  sk_canvas:draw_rect(Canvas, Rect, Paint),
 
+  Oval = sk_rrect:new(),
+  sk_rrect:set_oval(Oval, Rect),
+  sk_rrect:offset(Oval, 1400, 1600),
+  sk_paint:set_color(Paint, sk_color:blue()),
 
-device_and_queue(Instance, Surface) ->
-  [PhysicalDev|_] = vk_physical_device:enumerate(Instance),
-  {ok, Queues} = vk_queue_family:enumerate(PhysicalDev),
-  QueueFamilies  = find_queues(Queues),
-  QueuesWithPrio = prio_queues(Queues),
-  Ext0 = vk_device_extensions:new(),
-  Ext1 = vk_device_extensions:enable_khr_swapchain(Ext0),
-  true = vk_device_extensions:supported_by_device(PhysicalDev, Ext1),
-  DevCreateInfo0 = vk_device_create_info:new(),
-  DevCreateInfo1 = vk_device_create_info:with_queue_create_infos(QueueFamilies, DevCreateInfo0),
-  DevCreateInfo2 = vk_device_create_info:with_features(Ext1, DevCreateInfo1),
-  case vk_device:new(PhysicalDev, DevCreateInfo2) do
-     {ok, {Dev, [Gfx]}} -> {ok, {PhysicalDev, Dev, Gfx, Gfx}};
-     {ok, {Dev, [Gfx,Pres|_]}} -> {ok, {PhysicalDev, Dev, Gfx, Pres}};
-  end.
+  sk_canvas:draw_rect(Canvas, Rect, Paint),
 
-prio_queues(Qs) ->
-  Queues = maps:values(Acc),
-  QueuePrio = 1.0,
-  lists:map(fun Q -> {Q, QueuePrio} end, Queues).
+  sk_paint:set_color(Paint, sk_color:red()),
+  sk_canvas:draw_circle(Canvas, 180.0, 1500.0, 1250.0, Paint),
 
-find_queues(Qs, Surf) ->
-  find_queues(Qs, Surf, #{ present => none, graphics => none }).
-find_queues([], _Surface, Acc) -> Acc;
-find_queues([Q|Queues], Surface, Acc) ->
-  Next = case { vk_queue_family:supports_graphics(Q),
-              , vk_surface:is_supported(Q, Surface) } of
-           {true, true} -> #{ graphics => Q, present => Q };
-           {true, _}    -> Acc#{ graphics => Q };
-           {_, true}    -> Acc#{ present  => Q };
-           _ -> Acc
-         end,
-  find_queues(Queues, Surface, Next).
+  sk_rrect:offset(Oval, 80, 100),
+  sk_paint:set_color(Paint, sk_color:yellow()),
+  sk_canvas:draw_round_rect(Canvas, Rect, 800.0, 900.0, Paint),
 
+  Path = sk_path:new(),
+  sk_path:cubic_to(Path, {768, 2000}, {512, 256}, {256, 256}),
 
-buffer({_PhysicalDev, LogicalDev, _GfxQ, _PresentQ}) ->
-  vk_cpu_accessible_buffer:from_data(LogicalDev, vk_buffer_usage:all(), 12).
+  sk_paint:set_color(Paint, sk_color:green()),
+  sk_canvas:draw_path(Canvas, Path, Paint),
 
+  Paint2 = sk_paint:new(),
+  sk_paint:set_color(Paint2, sk_color:blue()),
+  Font = sk_font:new([{size, 300.0}]),
+  Text = sk_text_blob:from_binary("Hello, Joe!", Font),
+  sk_canvas:draw_text_blob(Canvas, Text, 500, 350, Paint2),
 
-swapchain(Instance, Surface, {PhysicalDev, LogicalDev, GfxQ, PresentQ}) ->
-  {ok, Capabilities} = vk_surface:capabilities(PhysicalDev, Surface),
-  [SurfaceFormat|_] = vk_surface_capabilities:supported_formats(Capabilities),
-  [PresentMode|_] = vk_surface_capabilities:present_modes(Capabilities),
-  {ok, {Swapchain, Images}} = vk_swapchain:new(#{
-    device => Device,
-    surface => Surface,
-    num_images => ImageCount,
-    format => SurfaceFormat,
-    dimensions => Extent,
-    layers => Layers,
-    usage => ImageUsage,
-    sharing_mode => vk_queue:sharing_mode(GfxQ),
-    transform => vk_surface_capabilities:current_transform(Capabilities),
-    alpha => vk_swapchain_composite_alpha:opaque(),
-    mode => PresentMode,
-    fullscreen_exclusive => false,
-    clipped => true,
-    color_space => vk_swapchain_color_space:srgb_non_linear()
-   }),
-  {ok, Swapchain, Images}.
+  Picture = sk_picture:from_canvas(Canvas),
+  sk_picture:as_bytes(Picture).
 
+star() ->
+  Canvas = sk_canvas:new(1000, 1000),
+  Path = sk_path:new(),
+  R = 0.45 * 245.0,
+  TAU = 6.2831853,
+  [
+   sk_path:line_to(
+     Path,
+     R* math:cos( 3 * X * TAU / 7 ),
+     R * math:sin( 3 * X * TAU / 7))
+   || X <- lists:seq(0,9)
+  ],
+  sk_path:close(Path),
+  Paint = sk_paint:new(),
+  sk_canvas:clear(Canvas, sk_color:red()),
+  sk_canvas:translate(Canvas, 0.5 * 256.0, 0.5 * 256.0),
+  sk_canvas:draw_path(Canvas, Path, Paint),
 
-gfx_pipeline(Device) ->
-  P0 = vk_gfx_pipeline:start(),
-  P1 = vk_gfx_pipeline:
-
-  {ok, P?}.
-
-
-command_pool() ->
-  CP0 = vk_command_pool_create_info:new(),
-  CP1 = vk_command_pool_create_info:with_flags(0, CP0),
-  CP2 = vk_command_pool_create_info:with_queue_family_index(GraphicsIndex),
-  {ok, Pool} = vk_command_pool:new(Device, CP2),
-  {ok, Pool}.
+  Picture = sk_picture:from_canvas(Canvas),
+  sk_picture:as_bytes(Picture).

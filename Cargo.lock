@@ -60,6 +60,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
+name = "ash"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "003d1fb2eb12eb06d4a03dbe02eea67a9fac910fa97932ab9e3a75b96a1ea5e5"
+dependencies = [
+ "shared_library",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -106,9 +115,9 @@ dependencies = [
 
 [[package]]
 name = "bindgen"
-version = "0.52.0"
+version = "0.53.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1c85344eb535a31b62f0af37be84441ba9e7f0f4111eb0530f43d15e513fe57"
+checksum = "99de13bb6361e01e493b3db7928085dcc474b7ba4f5481818e53a89d76b8393f"
 dependencies = [
  "bitflags",
  "cexpr",
@@ -221,23 +230,8 @@ checksum = "f29f7768b2d1be17b96158e3285951d366b40211320fb30826a76cb7a0da6400"
 dependencies = [
  "bitflags",
  "block",
- "core-foundation 0.6.4",
- "core-graphics 0.17.3",
- "foreign-types",
- "libc",
- "objc",
-]
-
-[[package]]
-name = "cocoa"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a4736c86d51bd878b474400d9ec888156f4037015f5d09794fab9f26eab1ad4"
-dependencies = [
- "bitflags",
- "block",
- "core-foundation 0.7.0",
- "core-graphics 0.19.0",
+ "core-foundation",
+ "core-graphics",
  "foreign-types",
  "libc",
  "objc",
@@ -249,17 +243,7 @@ version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25b9e03f145fd4f2bf705e07b900cd41fc636598fe5dc452fd0db1441c3f496d"
 dependencies = [
- "core-foundation-sys 0.6.2",
- "libc",
-]
-
-[[package]]
-name = "core-foundation"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57d24c7a13c43e870e37c1556b74555437870a04514f7685f5b354e090567171"
-dependencies = [
- "core-foundation-sys 0.7.0",
+ "core-foundation-sys",
  "libc",
 ]
 
@@ -270,31 +254,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7ca8a5221364ef15ce201e8ed2f609fc312682a8f4e0e3d4aa5879764e0fa3b"
 
 [[package]]
-name = "core-foundation-sys"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
-
-[[package]]
 name = "core-graphics"
 version = "0.17.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56790968ab1c8a1202a102e6de05fc6e1ec87da99e4e93e9a7d13efbfc1e95a9"
 dependencies = [
  "bitflags",
- "core-foundation 0.6.4",
- "foreign-types",
- "libc",
-]
-
-[[package]]
-name = "core-graphics"
-version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59e78b2e0aaf43f08e7ae0d6bc96895ef72ff0921c7d4ff4762201b2dba376dd"
-dependencies = [
- "bitflags",
- "core-foundation 0.7.0",
+ "core-foundation",
  "foreign-types",
  "libc",
 ]
@@ -306,8 +272,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8dc065219542086f72d1e9f7aadbbab0989e980263695d129d502082d063a9d0"
 dependencies = [
  "cfg-if",
- "core-foundation-sys 0.6.2",
- "core-graphics 0.17.3",
+ "core-foundation-sys",
+ "core-graphics",
  "libc",
  "objc",
 ]
@@ -454,11 +420,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "erlang-binary-buffer"
+version = "0.1.0"
+dependencies = [
+ "rustler 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "erlang-etf"
 version = "0.1.0"
 dependencies = [
  "byteorder",
  "num",
+]
+
+[[package]]
+name = "erlang-gui"
+version = "0.1.0"
+dependencies = [
+ "crossbeam",
+ "crossbeam-utils",
+ "erlang-etf",
+ "lazy_static",
+ "rustler 0.21.0",
+ "skia-safe",
+ "skulpin",
+ "winit",
+]
+
+[[package]]
+name = "erlang-skia"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "rustler 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "skia-safe",
 ]
 
 [[package]]
@@ -493,12 +489,6 @@ dependencies = [
  "libc",
  "miniz_oxide",
 ]
-
-[[package]]
-name = "fnv"
-version = "1.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fad85553e09a6f881f739c29f0b00b0f01357c743266d478b68951ce23285f3"
 
 [[package]]
 name = "foreign-types"
@@ -536,12 +526,6 @@ name = "glob"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
-
-[[package]]
-name = "half"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20d6a47d6e4b8559729f58287efa8e6f767e603c068fea7a5e4d9f1cebe2bebb"
 
 [[package]]
 name = "heck"
@@ -716,8 +700,8 @@ checksum = "f83c7dcc2038e12f68493fa3de44235df27b2497178e257185b4b5b5d028a1e4"
 dependencies = [
  "bitflags",
  "block",
- "cocoa 0.19.1",
- "core-graphics 0.17.3",
+ "cocoa",
+ "core-graphics",
  "foreign-types",
  "log",
  "objc",
@@ -953,7 +937,7 @@ dependencies = [
  "cloudabi",
  "libc",
  "redox_syscall",
- "smallvec 1.2.0",
+ "smallvec",
  "winapi 0.3.8",
 ]
 
@@ -1074,13 +1058,32 @@ dependencies = [
 [[package]]
 name = "rustler"
 version = "0.21.0"
+dependencies = [
+ "lazy_static",
+ "rustler_codegen 0.21.0",
+ "rustler_sys 2.0.0",
+]
+
+[[package]]
+name = "rustler"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "087d812084e88e84d09ad05abebb24e2967b287ddfa692296f742bcf3e403f93"
 dependencies = [
  "lazy_static",
- "rustler_codegen",
- "rustler_sys",
+ "rustler_codegen 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustler_sys 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "which 2.0.1",
+]
+
+[[package]]
+name = "rustler_codegen"
+version = "0.21.0"
+dependencies = [
+ "heck",
+ "proc-macro2 1.0.8",
+ "quote 1.0.2",
+ "syn 1.0.14",
 ]
 
 [[package]]
@@ -1092,7 +1095,14 @@ dependencies = [
  "heck",
  "proc-macro2 0.4.30",
  "quote 0.6.13",
- "syn",
+ "syn 0.15.44",
+]
+
+[[package]]
+name = "rustler_sys"
+version = "2.0.0"
+dependencies = [
+ "unreachable 1.0.0",
 ]
 
 [[package]]
@@ -1101,7 +1111,7 @@ version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e2c6dd78a5cffd4294c4aca568522736b8a67f0e8ccdb6a55354dc933726bc4"
 dependencies = [
- "unreachable",
+ "unreachable 0.1.1",
 ]
 
 [[package]]
@@ -1205,19 +1215,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fdf1b9db47230893d76faad238fd6097fd6d6a9245cd7a4d90dbd639536bbd2"
 
 [[package]]
-name = "skia"
-version = "0.1.0"
-dependencies = [
- "lazy_static",
- "rustler",
- "skia-safe",
-]
-
-[[package]]
 name = "skia-bindings"
 version = "0.26.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3a38d82d2d3021c59e4a21f799f894bb59c8bf4161836896338ef50f8fe3cbc"
 dependencies = [
  "bindgen",
  "cc",
@@ -1233,8 +1232,6 @@ dependencies = [
 [[package]]
 name = "skia-safe"
 version = "0.26.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c02fb631f02d1a0a1e94c6ddd5a7200b7ef8b348c758e171da558fd72321015"
 dependencies = [
  "bitflags",
  "lazy_static",
@@ -1242,19 +1239,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "skulpin"
+version = "0.6.0"
+dependencies = [
+ "ash",
+ "cocoa",
+ "log",
+ "metal",
+ "objc",
+ "raw-window-handle",
+ "skia-safe",
+ "winapi 0.3.8",
+ "winit",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
-
-[[package]]
-name = "smallvec"
-version = "0.6.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7b0758c52e15a8b5e3691eae6cc559f08eee9406e548a4477ba4e67770a82b6"
-dependencies = [
- "maybe-uninit",
-]
 
 [[package]]
 name = "smallvec"
@@ -1314,6 +1317,17 @@ dependencies = [
  "proc-macro2 0.4.30",
  "quote 0.6.13",
  "unicode-xid 0.1.0",
+]
+
+[[package]]
+name = "syn"
+version = "1.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af6f3550d8dff9ef7dc34d384ac6f107e5d31c8f57d9f28e0081503f547ac8f5"
+dependencies = [
+ "proc-macro2 1.0.8",
+ "quote 1.0.2",
+ "unicode-xid 0.2.0",
 ]
 
 [[package]]
@@ -1398,6 +1412,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "unreachable"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "382810877fe448991dfc7f0dd6e3ae5d58088fd0ea5e35189655f84e6814fa56"
+dependencies = [
+ "void",
+]
+
+[[package]]
 name = "vcpkg"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1416,53 +1439,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "914b1a6776c4c929a602fafd8bc742e06365d4bcbe48c30f9cca5824f70dc9dd"
 
 [[package]]
-name = "vk-sys"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c24c107c0402856ad434d2dc0f3dbdc68c9e170e8bab0f27aa82a282d234d57c"
-
-[[package]]
 name = "void"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
-
-[[package]]
-name = "vulkan"
-version = "0.1.0"
-dependencies = [
- "lazy_static",
- "rustler",
- "vulkano",
-]
-
-[[package]]
-name = "vulkano"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9137b934eb7377d72026e9052207fbd08a99ffb30c89adcc0de5526ae908254b"
-dependencies = [
- "crossbeam",
- "fnv",
- "half",
- "lazy_static",
- "shared_library",
- "smallvec 0.6.13",
- "vk-sys",
-]
-
-[[package]]
-name = "vulkano-win"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa29e1ec4638ad38241ba3706f35c75033efae55c7bb5819eb8ada589fa57c9a"
-dependencies = [
- "cocoa 0.20.0",
- "metal",
- "objc",
- "vulkano",
- "winit",
-]
 
 [[package]]
 name = "walkdir"
@@ -1605,9 +1585,9 @@ checksum = "65a5c1a5ef76ac31cc97ad29489acdbed2178f3fc12ca00ee6cb11d60adb5a3a"
 dependencies = [
  "android_glue",
  "bitflags",
- "cocoa 0.19.1",
- "core-foundation 0.6.4",
- "core-graphics 0.17.3",
+ "cocoa",
+ "core-foundation",
+ "core-graphics",
  "core-video-sys",
  "dispatch",
  "instant",
@@ -1624,17 +1604,6 @@ dependencies = [
  "wayland-client",
  "winapi 0.3.8",
  "x11-dl",
-]
-
-[[package]]
-name = "winit-port"
-version = "0.1.0"
-dependencies = [
- "erlang-etf",
- "lazy_static",
- "rustler",
- "vulkano-win",
- "winit",
 ]
 
 [[package]]

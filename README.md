@@ -22,3 +22,39 @@ NEXT. fill in the erlang api gaps with NIFs so the thing actually runs.
 5) setup an event handler for winit to get events into erlang
 6) draw a cursor
 
+
+
+=== NOTES === 
+
+There will be a Port Driver that works as as our RenderLoop and as our
+EventLoop.
+
+The Port Driver will handle incoming primitive drawing commands from Erlang, and
+it will relay events from the window.
+
+From Erlang, a set of NIFs will create Skia resources that can be shared around
+the BEAM, and ultimately will be sent to the Port Driver to display on screen.
+
+
+
+       \
+       |---[ port ]--> EventLoop + RenderLoop?
+       |                   ^
+       |                   |
+Erlang |      [ opaque resources in memoyy ]
+       |                   ^
+       |                   |
+       |---[ nif  ]-->  
+       /
+
+
+
+To render, we need to have:
+1) Instance, Device
+2) Window, Surface
+3) Queue, SwapChain, Images
+4) Pipeline, FrameBuffer
+in the same thread.
+
+To create drawing commands we need:
+1) Instance, Device, QueueFamily

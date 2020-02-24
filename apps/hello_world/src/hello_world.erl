@@ -1,35 +1,6 @@
 -module(hello_world).
 
--compile([export_all]).
-
-animate() -> animate(0, right).
-
-animate(X, right) when X > 2000 -> animate(X, left);
-animate(X, left ) when X < 0    -> animate(X, right);
-animate(X, right) -> draw(X), animate(X+10, right);
-animate(X, left ) -> draw(X), animate(X-10, left).
-
-draw(X) ->
-  Canvas = sk_canvas:new(1000, 1000),
-  sk_canvas:draw_color(Canvas, sk_color:cyan()),
-
-  Paint = sk_paint:new(),
-  sk_paint:set_stroke_width(Paint, 40.0),
-  sk_paint:set_color(Paint, sk_color:red()),
-  Rect = sk_rect:make_xywh(X, 700, 400, 600),
-  sk_canvas:draw_rect(Canvas, Rect, Paint),
-
-  Paint2 = sk_paint:new(),
-  sk_paint:set_color(Paint2, sk_color:blue()),
-  Font = sk_font:new([{size, 300.0}]),
-  Text = sk_text_blob:from_binary("Hello, Joe!", Font),
-  sk_canvas:draw_text_blob(Canvas, Text, 500, 350, Paint2),
-
-  Picture = sk_picture:from_canvas(Canvas),
-  Bytes = sk_picture:as_bytes(Picture),
-  chalk:render(Bytes),
-  timer:sleep(10).
-
+-export([sample/0,star/0]).
 
 sample() ->
   Canvas = sk_canvas:new(1000, 1000),

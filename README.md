@@ -29,9 +29,8 @@ and modify the code of the running system as it runs.
 ## Motivation
 
 As part of the StageVM project, Hello GUI aims to explore the required
-abstractions to power GUI applications that continue to enjoy [The Free
-Lunch](the free lunch is over link).
+abstractions to efficiently build and run GUI applications that continue to
+enjoy [The Free Lunch](the free lunch is over link).
 
-Additionally, the ability to run hardware accelerated graphics opens up the
-field for extremely low latency, high resolution visualizations of data from
-live systems in many forms.
+In addition, the process will help evaluate the difficulties in extending an
+actor runtime system to access native resources with low overhead.

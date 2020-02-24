@@ -1,60 +1,37 @@
-The idea here is to build a high-performance massively parallel graphical user
-system by binding to Skia and Vulkan to Erlang
+# Hello, GUI
 
+The two goals behind the project are:
 
-=== STUFFS TO DO ===
+1. To prove that we can build a high-performance massively parallel graphical
+   user system
+2. To provide a reflective, self-hosted environment in which to build Erlang
+   systems in the spirit of Smalltalk
 
-DONE. send/receive erlang terms to the port (not just plain text)
+## Architecture
 
-DONE. create a default surface using vulkan
-    
-     currently learning about vulkan's architecture
-     and mapping out the high-level erlang api to interface with it.
+Currently the main project is split into 2 layers, from the top down:
 
-DONE. fill in the erlang api gaps with NIFs so the thing actually runs.
+1. **Chalk**, a high-level graphics pipeline that leverages Erlang's SMP.
 
-      if a window pops up with a color on it, i'm dandy!
+2. A set of NIFs and Ports written in Rust to interact with native libraries
+   that provide hardware accelerated graphics.
 
-DONE. expose canvas/surface as an opaque object to draw on
-DONE. create a skia surface as an opaque object too
-DONE. draw on the window surface using Skia NIFs
-DONE. render skia surface on the vulkan surface 
+On top of Chalk, we can build libraries for:
 
-5) setup an event handler for winit to get events into erlang
+1. Writing any kind of GUI applications
 
+2. Writing games, interactive media, and digital art
 
+On top of which we can build an interactive environment for building Erlang
+systems, that runs within Erlang, in Erlang, and allows you to visualize, edit,
+and modify the code of the running system as it runs.
 
-=== NOTES === 
+## Motivation
 
-There will be a Port Driver that works as as our RenderLoop and as our
-EventLoop.
+As part of the StageVM project, Hello GUI aims to explore the required
+abstractions to power GUI applications that continue to enjoy [The Free
+Lunch](the free lunch is over link).
 
-The Port Driver will handle incoming primitive drawing commands from Erlang, and
-it will relay events from the window.
-
-From Erlang, a set of NIFs will create Skia resources that can be shared around
-the BEAM, and ultimately will be sent to the Port Driver to display on screen.
-
-
-
-       \
-       |---[ port ]--> EventLoop + RenderLoop?
-       |                   ^
-       |                   |
-Erlang |      [ opaque resources in memoyy ]
-       |                   ^
-       |                   |
-       |---[ nif  ]-->  
-       /
-
-
-
-To render, we need to have:
-1) Instance, Device
-2) Window, Surface
-3) Queue, SwapChain, Images
-4) Pipeline, FrameBuffer
-in the same thread.
-
-To create drawing commands we need:
-1) Instance, Device, QueueFamily
+Additionally, the ability to run hardware accelerated graphics opens up the
+field for extremely low latency, high resolution visualizations of data from
+live systems in many forms.

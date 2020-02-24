@@ -77,6 +77,7 @@ rustler::rustler_export_nifs! {
         ("sk_canvas__draw_color", 2, sk_canvas__draw_color),
         ("sk_canvas__draw_paint", 2, sk_canvas__draw_paint),
         ("sk_canvas__draw_path", 3, sk_canvas__draw_path),
+        ("sk_canvas__draw_picture", 2, sk_canvas__draw_picture),
         ("sk_canvas__draw_rect", 3, sk_canvas__draw_rect),
         ("sk_canvas__draw_round_rect", 5, sk_canvas__draw_round_rect),
         ("sk_canvas__draw_rrect", 3, sk_canvas__draw_rrect),
@@ -184,6 +185,21 @@ fn sk_canvas__draw_path<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>,
         .unwrap()
         .recording_canvas()
         .draw_path(&path, &paint);
+
+    Ok(canvas_resource.encode(env))
+}
+
+fn sk_canvas__draw_picture<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let canvas_resource: ResourceArc<CanvasResource> = args[0].decode()?;
+    let picture_resource: ResourceArc<PictureResource> = args[1].decode()?;
+
+    let mut picture = picture_resource.data.write().unwrap().clone();
+    canvas_resource
+        .data
+        .write()
+        .unwrap()
+        .recording_canvas()
+        .draw_picture(picture, None, None);
 
     Ok(canvas_resource.encode(env))
 }

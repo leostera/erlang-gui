@@ -10,6 +10,7 @@
         , draw_paint/2
         , draw_path/3
         , draw_rect/3
+        , draw_picture/2
         , draw_round_rect/5
         , draw_rrect/3
         , draw_text_blob/5
@@ -40,3 +41,5 @@ draw_image(C, Rect, Paint) -> skia_native:sk_canvas__draw_image(C, Rect, Paint).
 draw_image_rect(C, Image, Rect, Paint) -> skia_native:sk_canvas__draw_image_rect(C, Image, Rect, Paint).
 
 draw_text_blob(C, Text, X, Y, Paint) -> skia_native:sk_canvas__draw_text_blob(C, Text, X, Y, Paint).
+
+draw_picture(C, Picture) -> skia_native:sk_canvas__draw_picture(C, Picture).

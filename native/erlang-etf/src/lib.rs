@@ -650,7 +650,10 @@ impl<'a> Encoder<'a> {
         self.wrtr.write_all(s.as_ref()).map_err(From::from)
     }
     fn encode_list(&mut self, list: Vec<Eterm>) -> Result<(), Error> {
-        self.wrtr.write_u32::<BigEndian>((list.len() - 1) as u32)?;
+        self.wrtr.write_u32::<BigEndian>(match list.len() {
+            0 => 0,
+            x => (x - 1) as u32,
+        })?;
         for term in list.into_iter() {
             self.encode_term(term)?;
         }

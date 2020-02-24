@@ -3,6 +3,7 @@
 -behaviour(gen_server).
 
 -export([ start_link/1
+        , stop/0
         , init/1
         , terminate/2
         , handle_call/3
@@ -24,8 +25,11 @@
 start_link(_Args) ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+stop() ->
+  gen_server:stop(?MODULE).
+
 init(_Args) ->
-  {ok, #{ frames => [] }}.
+  {ok, #{ frames => queue:new() }}.
 
 terminate(_, _) -> ok.
 
@@ -38,7 +42,7 @@ handle_call({drop_queue}, _From, _State) ->
   {reply, ok, State};
 
 handle_call({in_queue}, _From, #{ frames := Fs }=State) ->
-  {reply, length(Fs), State};
+  {reply, queue:len(Fs), State};
 
 handle_call({queue, Frame}, _From, State) ->
   {reply, ok, do_queue(Frame, State)}.
@@ -61,7 +65,10 @@ drop() -> gen_server:call(?MODULE, {drop_queue}).
 %% Internal
 %%===============================================================================
 
-do_next_frame(#{ frames := [] }=S) -> {{error, no_more_frames}, S};
-do_next_frame(#{ frames := [F|Fs]}) -> {{ok, F}, #{ frames => Fs }}.
+do_next_frame(#{ frames := Fs }) ->
+  case queue:out(Fs) of
+    {empty, Fs0} -> {{error, no_more_frames}, #{ frames => Fs0}};
+    {{value, F}, Fs1} -> {{ok, F}, #{ frames => Fs1 }}
+  end.
 
-do_queue(F, #{ frames := Fs }) -> #{ frames => [F | Fs] }.
+do_queue(F, #{ frames := Fs }) -> #{ frames => queue:in(F, Fs) }.

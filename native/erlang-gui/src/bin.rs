@@ -8,6 +8,9 @@ use crossbeam_utils::thread;
 
 use erletf::Eterm;
 
+#[macro_use]
+mod event_codec;
+
 mod beam_io;
 mod render_loop;
 
@@ -19,18 +22,8 @@ pub fn main() {
     let mut stdout = io::stdout();
 
     thread::scope(|s| {
-        eprintln!("Starting up Erlang GUI's Vulkan Driver...");
-        s.spawn(|_| {
-            eprintln!("Firing up Command Processor thread...");
-            beam_io::command_processor(&mut stdout, &commands_queue, &render_queue)
-        });
-        s.spawn(|_| {
-            eprintln!("Firing up BEAM IO thread...");
-            beam_io::reader(&mut stdin, &commands_queue)
-        });
-
-        eprintln!("Firing up Render Loop...");
+        s.spawn(|_| beam_io::command_processor(&mut stdout, &commands_queue, &render_queue));
+        s.spawn(|_| beam_io::reader(&mut stdin, &commands_queue));
         render_loop::run(&render_queue, &commands_queue);
     });
-    eprintln!("Closing Erlang GUI's Vulkan Driver!");
 }

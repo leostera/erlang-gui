@@ -38,29 +38,49 @@ pub fn command_processor(
 }
 
 fn handle_command(cmd: Vec<Eterm>, render_queue: &SegQueue<Vec<u8>>) -> Option<Eterm> {
-    match &cmd[1] {
-        Eterm::Atom(tag) => match tag.as_str() {
-            "echo" => Some(Eterm::Tuple(vec![
-                Eterm::Atom(String::from("echo")),
-                Eterm::Tuple(cmd),
-            ])),
-            "render" => {
-                let image = cmd[2].clone();
-
-                match image {
-                    Eterm::Binary(raw_image) => render_queue.push(raw_image),
-                    _ => (),
-                };
-
-                Some(Eterm::Tuple(vec![Eterm::Atom(String::from(
-                    "render_queued",
-                ))]))
+    if cmd.len() != 3 {
+        eprintln!("what: {:?}", cmd.clone());
+        return None;
+    };
+    let is_ref = {
+        let is_ref = match &cmd[0] {
+            Eterm::Tuple(parts) => match &parts[1] {
+                Eterm::Atom(is_ref) => is_ref.as_str(),
+                _ => "none",
+            },
+            _ => "none",
+        };
+        is_ref != "none"
+    };
+    let kind = {
+        match &cmd[1] {
+            Eterm::Tuple(parts) => match &parts[1] {
+                Eterm::Atom(kind) => kind.as_str(),
+                _ => "unknown",
+            },
+            _ => "unknown",
+        }
+    };
+    let data = {
+        if cmd.len() > 1 {
+            match &cmd[2] {
+                Eterm::Tuple(parts) if parts.len() > 0 => parts[1].clone(),
+                _ => atom! { "missing_data" },
             }
-            "relay" => Some(Eterm::Tuple(cmd)),
-            _ => Some(Eterm::Tuple(vec![Eterm::Atom(String::from(
-                "unknown_command",
-            ))])),
-        },
+        } else {
+            atom! { "no_data" }
+        }
+    };
+    match (is_ref, kind, data) {
+        (_, "echo", data) => Some(tuple! { atom! { "echo" }, data.clone() }),
+        (_, "relay", _data) => Some(Eterm::Tuple(cmd.clone())),
+        (_, "render", frame) => {
+            match frame {
+                Eterm::Binary(raw_image) => render_queue.push(raw_image.to_vec()),
+                _ => (),
+            };
+            Some(tuple! { atom! { "render_queued" } })
+        }
         _ => None,
     }
 }

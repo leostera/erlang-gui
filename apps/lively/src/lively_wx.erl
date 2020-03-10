@@ -1,28 +1,6 @@
 -module(lively_wx).
 
 -include_lib("wx/include/wx.hrl").
-
--compile([export_all]).
-
-stop() -> wx_object:stop(?MODULE).
-
-start() ->
-    case wx_object:start(?MODULE, [], []) of
-  Err = {error, _} -> Err;
-  _Obj -> ok
-    end.
-
-
-init(_Args) ->
-    register(?MODULE, self()),
-    wx:new(),
-    catch wxSystemOptions:setOption("mac.listctrl.always_use_generic", 1),
-    Frame = wxFrame:new(wx:null(), ?wxID_ANY, "Lively Erlang",
-      [{size, {850, 600}}, {style, ?wxDEFAULT_FRAME_STYLE}]),
-    State = setup(#{ frame => Frame }),
-    process_flag(trap_exit, true),
-    {Frame, State}.
-
 -define(stc, wxStyledTextCtrl).
 
 -ifndef(wxSTC_ERLANG_COMMENT_FUNCTION).
@@ -39,6 +17,31 @@ init(_Args) ->
 -define(wxSTC_ERLANG_MODULES_ATT, 24).
 -endif.
 
+
+-compile([export_all]).
+
+reload(Ed) ->
+  NewSrc = ?stc:getText(Ed),
+  io:format("text updated, recompiling:\n\n ~s~n \n\n", [NewSrc]),
+  io:format("~p\n\n", [lively:reload(NewSrc)]).
+
+stop() -> wx_object:stop(?MODULE).
+
+start() ->
+    case wx_object:start(?MODULE, [], []) of
+  Err = {error, _} -> Err;
+  _Obj -> ok
+    end.
+
+init(_Args) ->
+    register(?MODULE, self()),
+    wx:new(),
+    catch wxSystemOptions:setOption("mac.listctrl.always_use_generic", 1),
+    Frame = wxFrame:new(wx:null(), ?wxID_ANY, "Lively Erlang",
+      [{size, {850, 600}}, {style, ?wxDEFAULT_FRAME_STYLE}]),
+    State = setup(#{ frame => Frame }),
+    process_flag(trap_exit, true),
+    {Frame, State}.
 
 setup(#{ frame := Frame }) ->
 	Panel = wxPanel:new(Frame, []),
@@ -65,13 +68,7 @@ setup(#{ frame := Frame }) ->
 	%%?stc:hideSelection(Ed, true),
 
 	?stc:connect(Ed, stc_updateui,
-							 [{callback, fun(_, _) ->
-															 NewSrc = ?stc:getText(Ed),
-															 io:format("text updated, recompiling:\n\n ~s~n \n\n", [NewSrc]),
-io:format("~p\n\n", [lively:reload(NewSrc)])
-													 end}]),
-
-
+							 [{callback, fun(_, _) -> reload(Ed) end}]),
 	Styles =  [{?wxSTC_ERLANG_DEFAULT,  {0,0,0}},
 						 {?wxSTC_ERLANG_COMMENT,  {160,53,35}},
 						 {?wxSTC_ERLANG_VARIABLE, {150,100,40}},

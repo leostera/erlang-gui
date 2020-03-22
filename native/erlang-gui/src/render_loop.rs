@@ -2,6 +2,7 @@ extern crate crossbeam;
 
 use crate::event_codec::AsErlangTerm;
 
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crossbeam::queue::SegQueue;
@@ -10,11 +11,11 @@ use erletf::Eterm;
 
 use skia_safe::Picture;
 
-use winit::event::{ElementState, Event, MouseButton, WindowEvent};
+use winit::event::Event;
 use winit::event_loop::EventLoop;
 use winit::platform::desktop::EventLoopExtDesktop;
 
-pub fn run(render_queue: &SegQueue<Vec<u8>>, command_queue: &SegQueue<Eterm>) -> () {
+pub fn run(current_frame: Arc<Mutex<Option<Vec<u8>>>>, command_queue: &SegQueue<Eterm>) -> () {
     let mut event_loop = EventLoop::<()>::with_user_event();
 
     let logical_size = winit::dpi::LogicalSize::new(3840.0, 2160.0);
@@ -52,9 +53,6 @@ pub fn run(render_queue: &SegQueue<Vec<u8>>, command_queue: &SegQueue<Eterm>) ->
 
     let mut renderer = renderer.unwrap();
 
-    // Increment a frame count so we can render something that moves
-    let mut frame_count = 0;
-
     loop {
         event_loop.run_return(|event, _window_target, control_flow| {
             match event {
@@ -62,21 +60,22 @@ pub fn run(render_queue: &SegQueue<Vec<u8>>, command_queue: &SegQueue<Eterm>) ->
                     // Queue a RedrawRequested event.
                     window.request_redraw();
                 }
-                Event::RedrawRequested(_windows_id) => {
-                    if let Ok(frame) = render_queue.pop() {
+                Event::RedrawRequested(_windows_id) => match &*current_frame.lock().unwrap() {
+                    None => (), // .try_unwrap().unwrap() command_queue.push(no_frames()),
+
+                    Some(frame) => {
                         command_queue.push(log_render_begin());
-                        if let Err(e) =
-                            renderer.draw(&window, |canvas, _coordinate_system_helper| {
-                                let picture = Picture::from_bytes(&frame).unwrap();
-                                picture.playback(canvas);
-                                frame_count += 1;
-                            })
-                        {
-                            *control_flow = winit::event_loop::ControlFlow::Exit
+                        let res = renderer.draw(&window, |canvas, _coordinate_system_helper| {
+                            let picture = Picture::from_bytes(&frame).unwrap();
+                            picture.playback(canvas);
+                        });
+
+                        match res {
+                            Err(_) => *control_flow = winit::event_loop::ControlFlow::Exit,
+                            Ok(_) => command_queue.push(log_render_end()),
                         };
-                        command_queue.push(log_render_end());
                     }
-                }
+                },
                 event => match relay_event(event) {
                     Some(e) => command_queue.push(e),
                     _ => (),
@@ -127,6 +126,46 @@ fn log_render_end() -> Eterm {
             tuple! {
                 tuple! { atom! {"status"}, atom! { "render_end" }},
                 tuple! { atom! {"time"}, atom! { now }}
+            }
+        }
+    }
+}
+
+fn no_frames() -> Eterm {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_millis()
+        .to_string();
+
+    tuple! {
+        tuple! { atom! { "ref" }, atom! { "none" } },
+        tuple! { atom! { "kind" }, atom! { "relay" } },
+        tuple! {
+            atom! { "data" },
+            tuple! {
+                tuple! { atom! {"status"}, atom! { "render_noop" }},
+                tuple! { atom! {"time"}, atom! { now }}
+            }
+        }
+    }
+}
+
+fn report_queue_size(s: usize) -> Eterm {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_millis()
+        .to_string();
+
+    tuple! {
+        tuple! { atom! { "ref" }, atom! { "none" } },
+        tuple! { atom! { "kind" }, atom! { "relay" } },
+        tuple! {
+            atom! { "data" },
+            tuple! {
+                tuple! { atom! {"status"}, atom! { "render_queue_size" }},
+                tuple! { atom! {"size"}, atom! { s.to_string() }}
             }
         }
     }

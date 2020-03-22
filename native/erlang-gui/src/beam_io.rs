@@ -1,6 +1,7 @@
 extern crate crossbeam;
 
 use std::io;
+use std::sync::{Arc, Mutex};
 
 use crossbeam::queue::SegQueue;
 
@@ -18,12 +19,14 @@ pub fn reader(stdin: &mut io::Stdin, command_queue: &SegQueue<Eterm>) -> Result<
 pub fn command_processor(
     stdout: &mut io::Stdout,
     command_queue: &SegQueue<Eterm>,
-    render_queue: &SegQueue<Vec<u8>>,
+    current_frame: Arc<Mutex<Option<Vec<u8>>>>,
 ) -> Result<(), Error> {
     let mut encoder = Encoder::new(stdout, true, true, true);
     loop {
         let output = match command_queue.pop() {
-            Ok(Eterm::Tuple(tup)) if tup.len() > 1 => handle_command(tup.clone(), render_queue),
+            Ok(Eterm::Tuple(tup)) if tup.len() > 1 => {
+                handle_command(tup.clone(), current_frame.clone())
+            }
             _ => None,
         };
         match output {
@@ -37,7 +40,7 @@ pub fn command_processor(
     }
 }
 
-fn handle_command(cmd: Vec<Eterm>, render_queue: &SegQueue<Vec<u8>>) -> Option<Eterm> {
+fn handle_command(cmd: Vec<Eterm>, current_frame: Arc<Mutex<Option<Vec<u8>>>>) -> Option<Eterm> {
     if cmd.len() != 3 {
         eprintln!("what: {:?}", cmd.clone());
         return None;
@@ -74,13 +77,14 @@ fn handle_command(cmd: Vec<Eterm>, render_queue: &SegQueue<Vec<u8>>) -> Option<E
     match (is_ref, kind, data) {
         (_, "echo", data) => Some(tuple! { atom! { "echo" }, data.clone() }),
         (_, "relay", _data) => Some(Eterm::Tuple(cmd.clone())),
-        (_, "render", frame) => {
-            match frame {
-                Eterm::Binary(raw_image) => render_queue.push(raw_image.to_vec()),
-                _ => (),
-            };
-            Some(tuple! { atom! { "render_queued" } })
-        }
+        (_, "render", term) => match term {
+            Eterm::Binary(raw_image) => {
+                let mut frame = current_frame.lock().unwrap();
+                *frame = Some(raw_image.to_vec());
+                Some(tuple! { atom! { "render_queued" } })
+            }
+            _ => Some(tuple! { atom! { "render_queue_failed" } }),
+        },
         _ => None,
     }
 }

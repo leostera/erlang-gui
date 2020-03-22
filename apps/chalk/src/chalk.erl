@@ -1,27 +1,24 @@
 -module(chalk).
 
--export([ render/1
+-export([ render/2
+        , render/3
         , start/0
         , stop/0
+        , set_frame_rate/1
         ]).
 
-start() ->
-  chalk_event_server:start_link([]),
-  chalk_port:start_link([]),
-  chalk_frame_dispatcher:start_link([]),
-  chalk_pipeline:start_link([]),
-  frame_buffer_server:start_link([]),
-  canvas_server:start_link([]),
-  canvas_server:set_frame_rate(20.0).
+start() -> application:ensure_all_started(chalk).
 
-stop() ->
-  chalk_event_server:stop(),
-  chalk_port:stop(),
-  chalk_frame_dispatcher:stop(),
-  chalk_pipeline:stop().
+stop() -> application:stop(chalk).
 
-render(Data) when is_list(Data) ->
-  render(erlang:list_to_binary(Data));
-render(Data) when is_binary(Data) ->
-  ok = chalk_pipeline:queue(Data),
+set_frame_rate(X) -> chalk_pipeline:set_frame_rate(X).
+
+render({X, Y}, Picture) when is_float(X) and is_float(Y) ->
+  render({X, Y, 0.0}, Picture);
+render({X, Y, Z}, Picture) when is_float(X) and is_float(Y) and is_float(Z) ->
+  {ok, Ref} = chalk_pipeline:draw({{X,Y,Z}, Picture}),
+  {ok, Ref}.
+
+render(Ref, {X, Y, Z}, Picture) when is_float(X) and is_float(Y) and is_float(Z) ->
+  ok = chalk_pipeline:draw({Ref, {X,Y,Z}, Picture}),
   ok.

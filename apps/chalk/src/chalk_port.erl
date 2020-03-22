@@ -4,19 +4,24 @@
 
 -define(CHALK_PORT, code:priv_dir(chalk) ++ "/native/chalk_port").
 
--export([ start_link/1
+-export([ start_link/2
         , stop/0
         , init/1
         , terminate/2
         , handle_info/2
         , handle_cast/2
+        , handle_call/3
         ]).
 
 -export([ render/1
         ]).
 
-start_link(_Args) ->
-  gen_server:start_link({local, ?MODULE}, ?MODULE, _Args, []).
+%%==============================================================================
+%% Behavior callbacks
+%%==============================================================================
+
+start_link(Args, Opts) ->
+  gen_server:start_link({local, ?MODULE}, ?MODULE, Args, Opts).
 
 stop() ->
   gen_server:stop(?MODULE).
@@ -41,11 +46,21 @@ handle_cast(quit, #{ port := Port }=State) ->
   port_command(Port, term_to_binary({Ref, quit})),
   {noreply, State};
 handle_cast({Kind, Data}, #{ port := Port }=State) ->
-  Ref = make_ref(),
-  Cmd = {{ref,Ref}, {kind,Kind}, {data,Data}},
-  Msg = term_to_binary(Cmd),
-  port_command(Port, Msg),
+  ok = do_command(Port, Kind, Data),
   {noreply, State}.
+
+handle_call(_, _, State) ->
+  {noreply, State}.
+
+%%==============================================================================
+%% Api
+%%==============================================================================
+
+render(Frame) when is_binary(Frame)-> gen_server:cast(?MODULE, {render, Frame}).
+
+%%==============================================================================
+%% Internal
+%%==============================================================================
 
 handle_event(Ev) when is_binary(Ev) ->
   case (catch binary_to_term(Ev)) of
@@ -55,7 +70,12 @@ handle_event(Ev) when is_binary(Ev) ->
 
 handle_event({{ref, none}, {kind, relay}, {data, Event}}) ->
   chalk_event_server:send(Event);
-handle_event(E) ->
-  ok.
+handle_event(_) -> ok.
 
-render(Frame) -> gen_server:cast(?MODULE, {render, Frame}).
+
+do_command(Port, Kind, Data) ->
+  Ref = make_ref(),
+  Cmd = {{ref,Ref}, {kind,Kind}, {data,Data}},
+  Msg = term_to_binary(Cmd),
+  port_command(Port, Msg),
+  ok.

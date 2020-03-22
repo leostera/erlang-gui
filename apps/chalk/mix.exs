@@ -24,6 +24,8 @@ defmodule Chalk.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
+      mod: {:chalk_app, []},
+      applications: [:kernel, :stdlib],
       extra_applications: [:logger]
     ]
   end

@@ -2,7 +2,7 @@
 
 -behavior(gen_server).
 
--export([ start_link/1
+-export([ start_link/2
         , stop/0
         , init/1
         , terminate/2
@@ -15,8 +15,12 @@
         , register/1
         ]).
 
-start_link(_Args) ->
-  gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+%%==============================================================================
+%% Behavior callbacks
+%%==============================================================================
+
+start_link(Args, Opts) ->
+  gen_server:start_link({local, ?MODULE}, ?MODULE, Args, Opts).
 
 stop() ->
   gen_server:stop(?MODULE).
@@ -36,7 +40,16 @@ handle_call({register, H}, _From, #{ handlers := Hs }) ->
 handle_info(_, State) ->
   {ok, State}.
 
+%%==============================================================================
+%% Api
+%%==============================================================================
 
 send(Event) -> gen_server:abcast(?MODULE, {send, Event}).
 
 register(H) -> gen_server:call(?MODULE, {register, H}).
+
+%%==============================================================================
+%% Internal
+%%==============================================================================
+
+

@@ -2,25 +2,26 @@
 
 -export([ new/2
         , clear/2
-        , translate/3
+        , clip_rect/3
         , draw_circle/5
         , draw_color/2
         , draw_image/3
         , draw_image_rect/4
         , draw_paint/2
         , draw_path/3
-        , draw_rect/3
         , draw_picture/2
+        , draw_rect/3
         , draw_round_rect/5
         , draw_rrect/3
         , draw_text_blob/5
+        , translate/3
         ]).
 
 new(W, H) -> skia_native:sk_canvas__new(W, H).
 
 clear(C, Color) -> skia_native:sk_canvas__clear(C, Color).
 
-translate(C, X, Y) -> skia_native:sk_canvas__translate(C, X, Y).
+translate(C, X, Y) when is_float(X) and is_float(Y) -> skia_native:sk_canvas__translate(C, X, Y).
 
 draw_color(C, Color) -> skia_native:sk_canvas__draw_color(C, Color).
 
@@ -43,3 +44,5 @@ draw_image_rect(C, Image, Rect, Paint) -> skia_native:sk_canvas__draw_image_rect
 draw_text_blob(C, Text, X, Y, Paint) -> skia_native:sk_canvas__draw_text_blob(C, Text, X, Y, Paint).
 
 draw_picture(C, Picture) -> skia_native:sk_canvas__draw_picture(C, Picture).
+
+clip_rect(C, W, H) when is_integer(W) and is_integer(H) -> skia_native:sk_canvas__clip_rect(C, W, H).

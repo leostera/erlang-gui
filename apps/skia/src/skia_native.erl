@@ -2,6 +2,7 @@
 
 -export([
          sk_canvas__clear/2,
+         sk_canvas__clip_rect/3,
          sk_canvas__draw_circle/5,
          sk_canvas__draw_color/2,
          sk_canvas__draw_paint/2,
@@ -17,6 +18,7 @@
          sk_color__cyan/0,
          sk_color__green/0,
          sk_color__red/0,
+         sk_color__rgba/4,
          sk_color__yellow/0,
          sk_font__new/0,
          sk_font__set_size/2,
@@ -24,9 +26,9 @@
          sk_paint__set_color/2,
          sk_paint__set_stroke_width/2,
          sk_paint__set_style/2,
+         sk_path__close/1,
          sk_path__cubic/7,
          sk_path__line_to/3,
-         sk_path__close/1,
          sk_path__new/0,
          sk_picture__as_bytes/1,
          sk_picture__from_canvas/1,
@@ -47,6 +49,7 @@ on_load() ->
 -define(NIF_ERROR, erlang:nif_error({nif_not_loaded,module,?MODULE,line,?LINE})).
 
 sk_canvas__clear(_C, _Color) -> ?NIF_ERROR.
+sk_canvas__clip_rect(_C, _X, _Y) -> ?NIF_ERROR.
 sk_canvas__draw_circle(_C, _Radius, _X, _Y, _Paint) -> ?NIF_ERROR.
 sk_canvas__draw_color(_C, _Color) -> ?NIF_ERROR.
 sk_canvas__draw_paint(_C, _Paint) -> ?NIF_ERROR.
@@ -62,6 +65,7 @@ sk_color__blue() -> ?NIF_ERROR.
 sk_color__cyan() -> ?NIF_ERROR.
 sk_color__green() -> ?NIF_ERROR.
 sk_color__red() -> ?NIF_ERROR.
+sk_color__rgba(_R, _G, _B, _A) -> ?NIF_ERROR.
 sk_color__yellow() -> ?NIF_ERROR.
 sk_font__new() -> ?NIF_ERROR.
 sk_font__set_size(_F, _S) -> ?NIF_ERROR.

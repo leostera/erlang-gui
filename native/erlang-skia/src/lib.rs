@@ -1,8 +1,11 @@
 #[macro_use]
 extern crate rustler;
 
+use std::io::Write;
+
 use std::sync::RwLock;
 
+use rustler::types::OwnedBinary;
 use rustler::{Encoder, Env, Error, ResourceArc, Term};
 
 use skia_safe::{
@@ -84,11 +87,13 @@ rustler::rustler_export_nifs! {
         ("sk_canvas__draw_text_blob", 5, sk_canvas__draw_text_blob),
         ("sk_canvas__new", 2, sk_canvas__new),
         ("sk_canvas__clear", 2, sk_canvas__clear),
+        ("sk_canvas__clip_rect", 3, sk_canvas__clip_rect),
         ("sk_canvas__translate", 3, sk_canvas__translate),
         ("sk_color__blue", 0, sk_color__blue),
         ("sk_color__cyan", 0, sk_color__cyan),
         ("sk_color__green", 0, sk_color__green),
         ("sk_color__red", 0, sk_color__red),
+        ("sk_color__rgba", 4, sk_color__rgba),
         ("sk_color__yellow", 0, sk_color__yellow),
         ("sk_font__new", 0, sk_font__new),
         ("sk_font__set_size", 2, sk_font__set_size),
@@ -287,6 +292,22 @@ fn sk_canvas__translate<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>,
     Ok(canvas_resource.encode(env))
 }
 
+fn sk_canvas__clip_rect<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let canvas_resource: ResourceArc<CanvasResource> = args[0].decode()?;
+    let w: i32 = args[1].decode()?;
+    let h: i32 = args[2].decode()?;
+
+    let rect = Rect::from_iwh(w, h);
+    canvas_resource
+        .data
+        .write()
+        .unwrap()
+        .recording_canvas()
+        .clip_rect(rect, None, true);
+
+    Ok(canvas_resource.encode(env))
+}
+
 fn sk_canvas__draw_text_blob<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
     let canvas_resource: ResourceArc<CanvasResource> = args[0].decode()?;
     let text_blob_resource: ResourceArc<TextBlobResource> = args[1].decode()?;
@@ -363,6 +384,18 @@ fn sk_color__red<'a>(env: Env<'a>, _args: &[Term<'a>]) -> Result<Term<'a>, Error
 fn sk_color__yellow<'a>(env: Env<'a>, _args: &[Term<'a>]) -> Result<Term<'a>, Error> {
     Ok(ResourceArc::new(ColorResource {
         data: RwLock::new(Color::YELLOW),
+    })
+    .encode(env))
+}
+
+fn sk_color__rgba<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let r: u8 = args[0].decode()?;
+    let g: u8 = args[1].decode()?;
+    let b: u8 = args[2].decode()?;
+    let a: u8 = args[3].decode()?;
+
+    Ok(ResourceArc::new(ColorResource {
+        data: RwLock::new(Color::from_argb(a, r, g, b)),
     })
     .encode(env))
 }
@@ -463,7 +496,10 @@ fn sk_picture__as_bytes<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>,
 
     let bytes: Vec<u8> = picture_resource.serialize().as_bytes().to_vec();
 
-    Ok(bytes.encode(env))
+    let mut binary = OwnedBinary::new(bytes.len()).unwrap();
+    let _ = binary.as_mut_slice().write_all(&bytes);
+
+    Ok(binary.release(env).encode(env))
 }
 
 fn sk_picture__from_canvas<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {

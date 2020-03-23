@@ -10,9 +10,11 @@
         , handle_cast/2
         ]).
 
--export([ draw/1
+-export([ register/1
         , flush/0
+        , flush_many/0
         , clear/0
+        , dump/0
         , set_frame_rate/1
         , set_viewport_size/1
         , make_frame/2
@@ -32,17 +34,15 @@ init(_Args) -> {ok, initial_state()}.
 
 terminate(_, _) -> ok.
 
-handle_call({draw_update, DrawReq}, _From, State) ->
-  {ok, NewState} = do_draw_update(DrawReq, State),
-  {reply, ok, NewState};
+handle_call(dump, _From, State) -> {reply, State, State};
 
-handle_call({draw_new, DrawReq}, _From, State) ->
-  {ok, Ref, NewState} = do_draw_new(DrawReq, State),
+handle_call({register, Fn}, _From, State) ->
+  {ok, Ref, NewState} = do_register(Fn, State),
   {reply, {ok, Ref}, NewState};
 
 handle_call(flush, _From, State) ->
-  {ok, NewState} = do_flush(State),
-  {reply, ok, NewState};
+  {ok, T, NewState} = do_flush(State),
+  {reply, T, NewState};
 
 handle_call(clear, _From, State) ->
   ok = do_clear(State),
@@ -70,13 +70,11 @@ clear() -> gen_server:call(?MODULE, clear).
 
 flush() -> gen_server:call(?MODULE, flush).
 
-draw({{X,Y,Z}, _Pic}=Canvas) when is_float(X) and is_float(Y) and is_float(Z)->
-  {ok, Ref} = gen_server:call(?MODULE, {draw_new, Canvas}),
-  {ok, Ref};
+flush_many() -> [ flush() || _ <- lists:seq(0, 1000) ].
 
-draw({_Ref, {X,Y,Z}, _Pic}=DrawReq) when is_float(X) and is_float(Y) and is_float(Z)->
-  ok = gen_server:call(?MODULE, {draw_update, DrawReq}),
-  ok.
+register(F) -> gen_server:call(?MODULE, {register, F}).
+
+dump() -> gen_server:call(?MODULE, dump).
 
 set_frame_rate(Rate) when is_float(Rate) ->
   gen_server:call(?MODULE, {set_frame_rate, Rate}).
@@ -90,27 +88,17 @@ set_viewport_size(Size={W, H}) when is_integer(W) and is_integer(H)
 %% Internal
 %%==============================================================================
 
-do_draw_update(DrawReq, #{ nodes := Nodes }=State) ->
-  ok = chalk_node_tree:update(DrawReq, Nodes),
-  {ok, State}.
-
-do_draw_new(DrawReq, #{ nodes := Nodes }=State) ->
-  {ok, Ref} = chalk_node_tree:add(DrawReq, Nodes),
+do_register(Fn, #{ nodes := Nodes }=State) ->
+  {ok, Ref} = chalk_node_tree:add(Fn, Nodes),
   {ok, Ref, State}.
 
-do_clear(#{ nodes := Nodes }=State) ->
+do_clear(#{ nodes := Nodes }) ->
   chalk_node_tree:clear(Nodes).
 
 do_flush(#{ nodes := Nodes, size := {W, H} }=State) ->
-  case chalk_node_tree:status(Nodes) of
-    dirty ->
-      io:format("flushing!\n", []),
-      Frame = chalk_pipeline:make_frame(Nodes, {W, H}),
-      ok = chalk_port:render(Frame);
-    clean ->
-      ok
-  end,
-  {ok, State}.
+  {Frame, T} = chalk_pipeline:make_frame(Nodes, {W, H}),
+  ok = chalk_port:render(Frame),
+  {ok, T, State}.
 
 do_set_frame_rate(none, Rate) ->
   timer:apply_interval( round(1000 / Rate), ?MODULE, flush, []);
@@ -121,11 +109,12 @@ do_set_frame_rate(TRef, Rate) ->
 make_frame(Nodes, {W, H}) ->
   Canvas = sk_canvas:new(W, H),
   sk_canvas:clip_rect(Canvas, W, H),
-  chalk_node_tree:fold(
+  {T, _} = timer:tc(chalk_node_tree,fold,
+    [
     fun ({{X, Y, _Z}, Picture}) ->
         sk_canvas:translate(Canvas, X, Y),
         sk_canvas:draw_picture(Canvas, Picture),
         sk_canvas:translate(Canvas, -X, -Y)
-    end, Nodes),
+    end, Nodes]),
   Picture = sk_picture:from_canvas(Canvas),
-  sk_picture:as_bytes(Picture).
+  {sk_picture:as_bytes(Picture), T}.

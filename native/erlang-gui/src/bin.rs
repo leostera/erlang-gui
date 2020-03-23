@@ -16,7 +16,7 @@ mod beam_io;
 mod render_loop;
 
 pub fn main() {
-    let mut current_frame: Arc<Mutex<Option<Vec<u8>>>> = Arc::new(Mutex::new(None));
+    let current_frame: Arc<Mutex<Option<Vec<u8>>>> = Arc::new(Mutex::new(None));
     let commands_queue = SegQueue::<Eterm>::new();
 
     let mut stdin = io::stdin();

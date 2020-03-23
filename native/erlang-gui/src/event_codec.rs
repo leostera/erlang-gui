@@ -3,6 +3,12 @@ use winit::event::{
     ElementState, Event, KeyboardInput, MouseButton, ScanCode, VirtualKeyCode, WindowEvent,
 };
 
+macro_rules! number {
+    ($n:expr) => {
+        Eterm::Integer($n as i32)
+    };
+}
+
 macro_rules! atom {
     ($atom:expr) => {
         Eterm::Atom(String::from($atom))
@@ -336,7 +342,7 @@ impl<'a> AsErlangTerm for WindowEvent<'a> {
                     { "state",  state.as_erlang_term() },
                     { "button", button.as_erlang_term() },
                 },
-                WindowEvent::MouseWheel { delta, phase, ..  } =>  list! {} ,
+                WindowEvent::MouseWheel { ..  } =>  list! {} ,
                 WindowEvent::ReceivedCharacter(_) =>  list! {} ,
                 WindowEvent::ScaleFactorChanged { .. } =>  list! {} ,
                 WindowEvent::ThemeChanged(_) => list! {},

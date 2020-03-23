@@ -80,7 +80,8 @@ pub fn run(current_frame: Arc<Mutex<Option<Vec<u8>>>>, command_queue: &SegQueue<
                     Some(e) => command_queue.push(e),
                     _ => (),
                 },
-            }
+            };
+            std::thread::sleep(std::time::Duration::from_millis(16));
         });
     }
 }
@@ -95,8 +96,7 @@ fn log_render_begin() -> Eterm {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards")
-        .as_millis()
-        .to_string();
+        .as_millis();
 
     tuple! {
         tuple! { atom! { "ref" }, atom! { "none" } },
@@ -105,7 +105,7 @@ fn log_render_begin() -> Eterm {
             atom! { "data" },
             tuple! {
                 tuple! { atom! {"status"}, atom! { "render_begin" }},
-                tuple! { atom! {"time"}, atom! { now }}
+                tuple! { atom! {"time"}, number! { now }}
             }
         }
     }
@@ -115,8 +115,7 @@ fn log_render_end() -> Eterm {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards")
-        .as_millis()
-        .to_string();
+        .as_millis();
 
     tuple! {
         tuple! { atom! { "ref" }, atom! { "none" } },
@@ -125,47 +124,7 @@ fn log_render_end() -> Eterm {
             atom! { "data" },
             tuple! {
                 tuple! { atom! {"status"}, atom! { "render_end" }},
-                tuple! { atom! {"time"}, atom! { now }}
-            }
-        }
-    }
-}
-
-fn no_frames() -> Eterm {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_millis()
-        .to_string();
-
-    tuple! {
-        tuple! { atom! { "ref" }, atom! { "none" } },
-        tuple! { atom! { "kind" }, atom! { "relay" } },
-        tuple! {
-            atom! { "data" },
-            tuple! {
-                tuple! { atom! {"status"}, atom! { "render_noop" }},
-                tuple! { atom! {"time"}, atom! { now }}
-            }
-        }
-    }
-}
-
-fn report_queue_size(s: usize) -> Eterm {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_millis()
-        .to_string();
-
-    tuple! {
-        tuple! { atom! { "ref" }, atom! { "none" } },
-        tuple! { atom! { "kind" }, atom! { "relay" } },
-        tuple! {
-            atom! { "data" },
-            tuple! {
-                tuple! { atom! {"status"}, atom! { "render_queue_size" }},
-                tuple! { atom! {"size"}, atom! { s.to_string() }}
+                tuple! { atom! {"time"}, number! { now }}
             }
         }
     }

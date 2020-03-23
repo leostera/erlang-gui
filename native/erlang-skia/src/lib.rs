@@ -9,7 +9,8 @@ use rustler::types::OwnedBinary;
 use rustler::{Encoder, Env, Error, ResourceArc, Term};
 
 use skia_safe::{
-    Color, Data, Font, Paint, Path, Picture, PictureRecorder, RRect, Rect, TextBlob, TextEncoding,
+    Color, Data, Font, Paint, PaintStyle, Path, Picture, PictureRecorder, RRect, Rect, TextBlob,
+    TextEncoding,
 };
 
 struct CanvasResource {
@@ -60,6 +61,10 @@ struct RRectResource {
     data: RwLock<RRect>,
 }
 
+struct PaintStyleResource {
+    data: RwLock<PaintStyle>,
+}
+
 struct TextBlobResource {
     data: RwLock<TextBlob>,
 }
@@ -76,6 +81,8 @@ mod atoms {
 rustler::rustler_export_nifs! {
     "skia_native",
     [
+        ("sk_canvas__clear", 2, sk_canvas__clear),
+        ("sk_canvas__clip_rect", 3, sk_canvas__clip_rect),
         ("sk_canvas__draw_circle", 5, sk_canvas__draw_circle),
         ("sk_canvas__draw_color", 2, sk_canvas__draw_color),
         ("sk_canvas__draw_paint", 2, sk_canvas__draw_paint),
@@ -86,8 +93,6 @@ rustler::rustler_export_nifs! {
         ("sk_canvas__draw_rrect", 3, sk_canvas__draw_rrect),
         ("sk_canvas__draw_text_blob", 5, sk_canvas__draw_text_blob),
         ("sk_canvas__new", 2, sk_canvas__new),
-        ("sk_canvas__clear", 2, sk_canvas__clear),
-        ("sk_canvas__clip_rect", 3, sk_canvas__clip_rect),
         ("sk_canvas__translate", 3, sk_canvas__translate),
         ("sk_color__blue", 0, sk_color__blue),
         ("sk_color__cyan", 0, sk_color__cyan),
@@ -101,9 +106,13 @@ rustler::rustler_export_nifs! {
         ("sk_paint__set_color", 2, sk_paint__set_color),
         ("sk_paint__set_stroke_width", 2, sk_paint__set_stroke_width),
         ("sk_paint__set_style", 2, sk_paint__set_style),
+        ("sk_paint__style_fill",0,sk_paint__style_fill),
+        ("sk_paint__style_stroke",0,sk_paint__style_stroke),
+        ("sk_paint__style_stroke_and_fill",0,sk_paint__style_stroke_and_fill),
+        ("sk_path__close", 1, sk_path__close),
         ("sk_path__cubic", 7, sk_path__cubic),
         ("sk_path__line_to", 3, sk_path__line_to),
-        ("sk_path__close", 1, sk_path__close),
+        ("sk_path__move_to", 3, sk_path__move_to),
         ("sk_path__new", 0, sk_path__new),
         ("sk_picture__as_bytes", 1, sk_picture__as_bytes),
         ("sk_picture__from_canvas", 1, sk_picture__from_canvas),
@@ -121,6 +130,7 @@ fn on_init<'a>(env: Env<'a>, _load_info: Term<'a>) -> bool {
     resource_struct_init!(ColorResource, env);
     resource_struct_init!(FontResource, env);
     resource_struct_init!(PaintResource, env);
+    resource_struct_init!(PaintStyleResource, env);
     resource_struct_init!(PathResource, env);
     resource_struct_init!(PictureResource, env);
     resource_struct_init!(RRectResource, env);
@@ -443,8 +453,34 @@ fn sk_paint__set_stroke_width<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Ter
     Ok(paint_resource.encode(env))
 }
 
+fn sk_paint__style_fill<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    Ok(ResourceArc::new(PaintStyleResource {
+        data: RwLock::new(PaintStyle::Fill),
+    })
+    .encode(env))
+}
+
+fn sk_paint__style_stroke_and_fill<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    Ok(ResourceArc::new(PaintStyleResource {
+        data: RwLock::new(PaintStyle::StrokeAndFill),
+    })
+    .encode(env))
+}
+
+fn sk_paint__style_stroke<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    Ok(ResourceArc::new(PaintStyleResource {
+        data: RwLock::new(PaintStyle::Stroke),
+    })
+    .encode(env))
+}
+
 fn sk_paint__set_style<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
     let paint_resource: ResourceArc<PaintResource> = args[0].decode()?;
+    let style_resource: ResourceArc<PaintStyleResource> = args[1].decode()?;
+
+    let style = style_resource.data.write().unwrap();
+    paint_resource.data.write().unwrap().set_style(*style);
+
     Ok(paint_resource.encode(env))
 }
 
@@ -462,6 +498,16 @@ fn sk_path__line_to<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Err
     let y0: f32 = args[2].decode()?;
 
     path_resource.data.write().unwrap().line_to((x0, y0));
+
+    Ok(path_resource.encode(env))
+}
+
+fn sk_path__move_to<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let path_resource: ResourceArc<PathResource> = args[0].decode()?;
+    let x0: f32 = args[1].decode()?;
+    let y0: f32 = args[2].decode()?;
+
+    path_resource.data.write().unwrap().move_to((x0, y0));
 
     Ok(path_resource.encode(env))
 }

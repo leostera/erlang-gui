@@ -26,9 +26,13 @@
          sk_paint__set_color/2,
          sk_paint__set_stroke_width/2,
          sk_paint__set_style/2,
+         sk_paint__style_fill/0,
+         sk_paint__style_stroke/0,
+         sk_paint__style_stroke_and_fill/0,
          sk_path__close/1,
          sk_path__cubic/7,
          sk_path__line_to/3,
+         sk_path__move_to/3,
          sk_path__new/0,
          sk_picture__as_bytes/1,
          sk_picture__from_canvas/1,
@@ -73,9 +77,13 @@ sk_paint__new() -> ?NIF_ERROR.
 sk_paint__set_color(_Paint, _Color) -> ?NIF_ERROR.
 sk_paint__set_stroke_width(_Paint, _Width) -> ?NIF_ERROR.
 sk_paint__set_style(_Paint, _Style) -> ?NIF_ERROR.
+sk_paint__style_fill() -> ?NIF_ERROR.
+sk_paint__style_stroke() -> ?NIF_ERROR.
+sk_paint__style_stroke_and_fill() -> ?NIF_ERROR.
 sk_path__close(_P) -> ?NIF_ERROR.
 sk_path__cubic(_P, _X, _Y, _X2, _Y2, _X3, _Y) -> ?NIF_ERROR.
 sk_path__line_to(_P, _X, _Y) -> ?NIF_ERROR.
+sk_path__move_to(_P, _X, _Y) -> ?NIF_ERROR.
 sk_path__new() -> ?NIF_ERROR.
 sk_picture__as_bytes(_Picture) -> ?NIF_ERROR.
 sk_picture__from_canvas(_Canvas) -> ?NIF_ERROR.

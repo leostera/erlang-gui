@@ -3,12 +3,15 @@
 -export([ new/0
         , close/1
         , line_to/3
+        , move_to/3
         , cubic_to/4
         ]).
 
 new() -> skia_native:sk_path__new().
 
 close(P) -> skia_native:sk_path__close(P).
+
+move_to(P, X, Y) -> skia_native:sk_path__move_to(P, X, Y).
 
 line_to(P, X, Y) -> skia_native:sk_path__line_to(P, X, Y).
 

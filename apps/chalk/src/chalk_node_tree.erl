@@ -10,7 +10,7 @@ setup() ->
   #{ refs => Refs, render => Zs }.
 
 clear(#{ refs := RefTable, render := ZsTable }) ->
-  ets:delete_all_objects(RefTable),
+  cets:delete_all_objects(RefTable),
   ets:delete_all_objects(ZsTable),
   ok.
 
@@ -27,9 +27,11 @@ add(Fn, #{ refs := RefTable }) ->
 
 fold(F, #{ render := ZsTable, refs := RefTable }) ->
   cets:foldl(fun ({Ref, Fn}, _) ->
-                {ok, {X,Y,Z}, Pic} = Fn(),
-                KV = {{Z,Y,X,Ref}, Pic},
-                ets:insert(ZsTable, KV)
+                case (catch Fn()) of
+                  {ok, {X,Y,Z}, Pic} -> KV = {{Z,Y,X,Ref}, Pic},
+                                      ets:insert(ZsTable, KV);
+                  _ -> ok
+                end
             end, none, RefTable),
   ets:foldl(fun ({K,V}, Acc) -> F({unkey(K),V}), Acc end, none, ZsTable),
   ets:delete_all_objects(ZsTable),

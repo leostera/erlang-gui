@@ -70,7 +70,7 @@ clear() -> gen_server:call(?MODULE, clear).
 
 flush() -> gen_server:call(?MODULE, flush).
 
-flush_many() -> [ flush() || _ <- lists:seq(0, 1000) ].
+flush_many() -> lists:foreach(fun chalk_pipeline:flush/0, lists:seq(0, 1000)).
 
 register(F) -> gen_server:call(?MODULE, {register, F}).
 

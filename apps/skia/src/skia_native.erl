@@ -20,8 +20,14 @@
          sk_color__red/0,
          sk_color__rgba/4,
          sk_color__yellow/0,
-         sk_font__new/0,
+         sk_font__default/0,
+         sk_font__new/1,
          sk_font__set_size/2,
+         sk_font_style__default/0,
+         sk_font_style__new/3,
+         sk_font_style__slant/1,
+         sk_font_style__weight/1,
+         sk_font_style__width/1,
          sk_paint__new/0,
          sk_paint__set_color/2,
          sk_paint__set_stroke_width/2,
@@ -40,7 +46,9 @@
          sk_rrect__new/0,
          sk_rrect__offset/3,
          sk_rrect__set_oval/2,
-         sk_text_blob__from_binary/2
+         sk_text_blob__from_binary/2,
+         sk_typeface__default/0,
+         sk_typeface__new/2
         ]).
 
 -compile(no_native).
@@ -71,7 +79,8 @@ sk_color__green() -> ?NIF_ERROR.
 sk_color__red() -> ?NIF_ERROR.
 sk_color__rgba(_R, _G, _B, _A) -> ?NIF_ERROR.
 sk_color__yellow() -> ?NIF_ERROR.
-sk_font__new() -> ?NIF_ERROR.
+sk_font__default() -> ?NIF_ERROR.
+sk_font__new(_Typeface) -> ?NIF_ERROR.
 sk_font__set_size(_F, _S) -> ?NIF_ERROR.
 sk_paint__new() -> ?NIF_ERROR.
 sk_paint__set_color(_Paint, _Color) -> ?NIF_ERROR.
@@ -92,3 +101,10 @@ sk_rrect__new() -> ?NIF_ERROR.
 sk_rrect__offset(_R, _X, _Y) -> ?NIF_ERROR.
 sk_rrect__set_oval(_Oval, _Rect) -> ?NIF_ERROR.
 sk_text_blob__from_binary(_Text, _Font) -> ?NIF_ERROR.
+sk_typeface__default() -> ?NIF_ERROR.
+sk_typeface__new(_Name, _FontStyle) -> ?NIF_ERROR.
+sk_font_style__default() -> ?NIF_ERROR.
+sk_font_style__new(Weight, Width, Slant) -> ?NIF_ERROR.
+sk_font_style__weight(Self) -> ?NIF_ERROR.
+sk_font_style__width(Self) -> ?NIF_ERROR.
+sk_font_style__slant(Self) -> ?NIF_ERROR.

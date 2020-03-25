@@ -1,0 +1,1 @@
+-module(sk_encoded_image_format).

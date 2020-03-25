@@ -1,0 +1,1 @@
+-module(sk_clip_op).

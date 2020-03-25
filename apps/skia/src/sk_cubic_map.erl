@@ -1,0 +1,1 @@
+-module(sk_cubic_map).

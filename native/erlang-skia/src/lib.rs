@@ -9,8 +9,8 @@ use rustler::types::OwnedBinary;
 use rustler::{Encoder, Env, Error, ResourceArc, Term};
 
 use skia_safe::{
-    Color, Data, Font, Paint, PaintStyle, Path, Picture, PictureRecorder, RRect, Rect, TextBlob,
-    TextEncoding,
+    Color, Data, Font, FontStyle, Paint, PaintStyle, Path, Picture, PictureRecorder, RRect, Rect,
+    TextBlob, TextEncoding, Typeface,
 };
 
 struct CanvasResource {
@@ -33,6 +33,10 @@ struct ColorResource {
 
 struct FontResource {
     data: RwLock<Font>,
+}
+
+struct FontStyleResource {
+    data: RwLock<FontStyle>,
 }
 
 struct PaintResource {
@@ -69,6 +73,10 @@ struct TextBlobResource {
     data: RwLock<TextBlob>,
 }
 
+struct TypefaceResource {
+    data: RwLock<Typeface>,
+}
+
 mod atoms {
     rustler_atoms! {
         atom ok;
@@ -100,8 +108,14 @@ rustler::rustler_export_nifs! {
         ("sk_color__red", 0, sk_color__red),
         ("sk_color__rgba", 4, sk_color__rgba),
         ("sk_color__yellow", 0, sk_color__yellow),
-        ("sk_font__new", 0, sk_font__new),
+        ("sk_font__new", 1, sk_font__new),
+        ("sk_font__default", 0, sk_font__default),
         ("sk_font__set_size", 2, sk_font__set_size),
+        ("sk_font_style__default",0, sk_font_style__default),
+        ("sk_font_style__new",3, sk_font_style__new),
+        ("sk_font_style__slant",1, sk_font_style__slant),
+        ("sk_font_style__weight",1, sk_font_style__weight),
+        ("sk_font_style__width",1, sk_font_style__width),
         ("sk_paint__new", 0, sk_paint__new),
         ("sk_paint__set_color", 2, sk_paint__set_color),
         ("sk_paint__set_stroke_width", 2, sk_paint__set_stroke_width),
@@ -121,6 +135,8 @@ rustler::rustler_export_nifs! {
         ("sk_rrect__offset", 3, sk_rrect__offset),
         ("sk_rrect__set_oval", 2, sk_rrect__set_oval),
         ("sk_text_blob__from_binary", 2, sk_text_blob__from_binary),
+        ("sk_typeface__default", 0, sk_typeface__default),
+        ("sk_typeface__new", 2, sk_typeface__new),
     ],
     Some(on_init)
 }
@@ -129,6 +145,7 @@ fn on_init<'a>(env: Env<'a>, _load_info: Term<'a>) -> bool {
     resource_struct_init!(CanvasResource, env);
     resource_struct_init!(ColorResource, env);
     resource_struct_init!(FontResource, env);
+    resource_struct_init!(FontStyleResource, env);
     resource_struct_init!(PaintResource, env);
     resource_struct_init!(PaintStyleResource, env);
     resource_struct_init!(PathResource, env);
@@ -136,6 +153,7 @@ fn on_init<'a>(env: Env<'a>, _load_info: Term<'a>) -> bool {
     resource_struct_init!(RRectResource, env);
     resource_struct_init!(RectResource, env);
     resource_struct_init!(TextBlobResource, env);
+    resource_struct_init!(TypefaceResource, env);
     true
 }
 
@@ -208,7 +226,7 @@ fn sk_canvas__draw_picture<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'
     let canvas_resource: ResourceArc<CanvasResource> = args[0].decode()?;
     let picture_resource: ResourceArc<PictureResource> = args[1].decode()?;
 
-    let mut picture = picture_resource.data.write().unwrap().clone();
+    let picture = picture_resource.data.write().unwrap().clone();
     canvas_resource
         .data
         .write()
@@ -410,10 +428,20 @@ fn sk_color__rgba<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error
     .encode(env))
 }
 
-fn sk_font__new<'a>(env: Env<'a>, _args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+fn sk_font__default<'a>(env: Env<'a>, _args: &[Term<'a>]) -> Result<Term<'a>, Error> {
     let font = Font::default();
     let font_resource = FontResource {
         data: RwLock::new(font),
+    };
+    Ok(ResourceArc::new(font_resource).encode(env))
+}
+
+fn sk_font__new<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let typeface_resource: ResourceArc<TypefaceResource> = args[0].decode()?;
+
+    let typeface = &*typeface_resource.data.read().unwrap();
+    let font_resource = FontResource {
+        data: RwLock::new(Font::from_typeface(typeface, None)),
     };
     Ok(ResourceArc::new(font_resource).encode(env))
 }
@@ -610,4 +638,72 @@ fn sk_text_blob__from_binary<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term
     };
 
     Ok(ResourceArc::new(text_blob_resource).encode(env))
+}
+
+fn sk_typeface__default<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let typeface = TypefaceResource {
+        data: RwLock::new(Typeface::default()),
+    };
+    Ok(ResourceArc::new(typeface).encode(env))
+}
+
+fn sk_typeface__new<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let name: String = args[0].decode()?;
+    let font_style: ResourceArc<FontStyleResource> = args[1].decode()?;
+
+    let typeface = TypefaceResource {
+        data: RwLock::new(
+            match Typeface::new(&name, *font_style.data.read().unwrap()) {
+                Some(t) => t,
+                None => Typeface::default(),
+            },
+        ),
+    };
+    Ok(ResourceArc::new(typeface).encode(env))
+}
+
+fn sk_font_style__default<'a>(env: Env<'a>, _args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let font_style = FontStyle::default();
+    let font_style_resource = FontStyleResource {
+        data: RwLock::new(font_style),
+    };
+    Ok(ResourceArc::new(font_style_resource).encode(env))
+}
+
+fn sk_font_style__new<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let weight: i32 = args[0].decode()?;
+    let width: i32 = args[1].decode()?;
+    let slant: i32 = args[2].decode()?;
+
+    let font_style = FontStyle::new(
+        skia_safe::font_style::Weight::from(weight),
+        skia_safe::font_style::Width::from(width),
+        match slant {
+            1 => skia_safe::font_style::Slant::Italic,
+            2 => skia_safe::font_style::Slant::Oblique,
+            _ => skia_safe::font_style::Slant::Upright,
+        },
+    );
+    let font_style_resource = FontStyleResource {
+        data: RwLock::new(font_style),
+    };
+    Ok(ResourceArc::new(font_style_resource).encode(env))
+}
+
+fn sk_font_style__slant<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let font_style_resource: ResourceArc<FontStyleResource> = args[0].decode()?;
+    let slant: i32 = font_style_resource.data.write().unwrap().slant() as i32;
+    Ok(slant.encode(env))
+}
+
+fn sk_font_style__weight<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let font_style_resource: ResourceArc<FontStyleResource> = args[0].decode()?;
+    let weight: i32 = *font_style_resource.data.write().unwrap().weight();
+    Ok(weight.encode(env))
+}
+
+fn sk_font_style__width<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let font_style_resource: ResourceArc<FontStyleResource> = args[0].decode()?;
+    let width: i32 = *font_style_resource.data.write().unwrap().width();
+    Ok(width.encode(env))
 }

@@ -1,0 +1,1 @@
+-module(sk_stroke_rec).

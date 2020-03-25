@@ -1,0 +1,1 @@
+-module(sk_blur_types).

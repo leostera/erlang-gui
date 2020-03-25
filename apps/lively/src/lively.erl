@@ -19,7 +19,9 @@ prepare(F, M) ->
    , bytecode => BC
    }.
 
-source_for_module(M) -> code:get_object_code(M).
+source_for_module(M) ->
+  {M, Bc, _} = code:get_object_code(M),
+  source(Bc).
 
 load(Name, BC) -> code:load_binary(Name, Name, BC).
 

@@ -81,7 +81,6 @@ pub fn run(current_frame: Arc<Mutex<Option<Vec<u8>>>>, command_queue: &SegQueue<
                     _ => (),
                 },
             };
-            std::thread::sleep(std::time::Duration::from_millis(16));
         });
     }
 }

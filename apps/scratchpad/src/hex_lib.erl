@@ -74,14 +74,16 @@ place_tiles(Size, Tiles) ->
                      }
                 end, Tiles).
 
-flat_hex_tile(Size) ->
+flat_hex_tile(Size) -> flat_hex_tile(Size, line_paint()).
+
+flat_hex_tile(Size, Paint) ->
   Points = flat_hex_points(Size),
 
   Canvas = sk_canvas:new(Size*2, Size*2),
 
   Path = polygon(Points),
 
-  sk_canvas:draw_path(Canvas, Path, line_paint()),
+  sk_canvas:draw_path(Canvas, Path, Paint),
   sk_picture:from_canvas(Canvas).
 
 

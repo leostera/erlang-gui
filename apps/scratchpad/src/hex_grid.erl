@@ -9,12 +9,16 @@
         , handle_call/3
         ]).
 
--export([ dump/0, measure/0 ]).
+-export([ dump/0, restart/0, start/0 ]).
 
-measure() ->
+start() ->
   hex_grid:start_link([],[]),
-  Data = chalk_pipeline:flush_many(),
-  file:write_file("medium_cets_ts", io_lib:fwrite("~p", [Data])).
+  chalk_pipeline:flush().
+
+restart() ->
+  gen_server:stop(hex_grid),
+  chalk_pipeline:clear(),
+  start().
 
 %%==============================================================================
 %% Behavior callbacks
@@ -26,7 +30,9 @@ init(Args) ->
   State = initial_state(Args),
   {ok, do_init(State)}.
 
-terminate(_, _) -> ok.
+terminate(_, #{ cells := Pids }) ->
+  [ exit(Pid) || Pid <- Pids ],
+  ok.
 
 handle_call(dump, _From, State) -> {reply, State, State};
 handle_call(_Msg, _From, State) -> {noreply, State}.
@@ -44,7 +50,7 @@ dump() -> gen_server:call(?MODULE, dump).
 %%==============================================================================
 
 initial_state(_) ->
-  #{ size => { 2000, 2000 }
+  #{ size => { 2000, 3000 }
    , cell_size => 100
    , cells => []
    }.
@@ -61,10 +67,12 @@ do_init(State=#{ size := {W,H}, cell_size := S }) ->
                 CellArgs = #{ pos => {X,Y,1.0}
                             , logical => Log
                             , tile => Tile
+                            , time => erlang:system_time()
                             , size => S },
                 {ok, Pid} = hex_cell:start_link(CellArgs, []),
                 Pid
             end, Tiles),
   State#{ tiles => Tiles
+        , cell_count => length(Cells)
         , cells => Cells }.
 

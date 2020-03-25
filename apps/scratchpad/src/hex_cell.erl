@@ -42,7 +42,31 @@ draw(Pid) -> gen_server:call(Pid, draw).
 %% Internal
 %%==============================================================================
 
-initial_state(S) -> S.
+initial_state(S=#{ size := Size }) ->
+  S#{ red_tile => hex_lib:flat_hex_tile(Size, red_paint())
+    , green_tile => hex_lib:flat_hex_tile(Size, green_paint())
+    }.
 
-do_draw(#{ pos := {X, Y, Z}, tile := T }=State) ->
-  {reply, {ok, {X, Y, Z}, T}, State}.
+do_draw(#{ pos := Pos
+         , tile := Tile
+         , red_tile := RedTile
+         , green_tile := GreenTile
+         , time := T
+         }=State) ->
+  Now = erlang:system_time(),
+  Delta = Now - T,
+  {reply, {ok, Pos, Tile}, State#{ time => Now }}.
+
+green_paint() ->
+  Paint = sk_paint:new(),
+  sk_paint:set_style(Paint, sk_paint:style_fill()),
+  sk_paint:set_stroke_width(Paint, 10.0),
+  sk_paint:set_color(Paint, sk_color:rgba(80,233,80,255)),
+  Paint.
+
+red_paint() ->
+  Paint = sk_paint:new(),
+  sk_paint:set_style(Paint, sk_paint:style_fill()),
+  sk_paint:set_stroke_width(Paint, 10.0),
+  sk_paint:set_color(Paint, sk_color:rgba(233,80,80,255)),
+  Paint.

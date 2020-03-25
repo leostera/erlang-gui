@@ -15,6 +15,10 @@ new(Partitions, Prefix, Opts) ->
              end, #{}, lists:seq(0, Partitions)),
   #{ tables => Tables, partitions => Partitions }.
 
+delete_all_objects(#{ tables := Ts }) ->
+  [ ets:delete_all_objects(T) || {_, T} <- maps:to_list(Ts) ],
+  ok.
+
 lookup(#{ tables := Ts }, Key) ->
   lists:foldl(fun (T, []) -> ets:lookup(T, Key);
                   (_, Acc) -> Acc

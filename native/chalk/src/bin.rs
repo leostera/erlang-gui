@@ -1,32 +1,41 @@
 extern crate crossbeam;
 extern crate crossbeam_utils;
 
-use std::io;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 
-use crossbeam::queue::SegQueue;
-use crossbeam_utils::thread;
-
-use erletf::Eterm;
+use std::sync::mpsc::channel;
 
 #[macro_use]
-mod event_codec;
-
 mod beam_io;
-mod render_loop;
+
+mod command;
+mod compositor;
+mod event_codec;
+mod fps_counter;
 
 pub fn main() {
-    let current_frame: Arc<Mutex<Option<Vec<u8>>>> = Arc::new(Mutex::new(None));
-    let commands_queue = SegQueue::<Eterm>::new();
+    let in_queue = crossbeam::queue::ArrayQueue::<command::CommandIn>::new(100);
 
-    let mut stdin = io::stdin();
-    let mut stdout = io::stdout();
+    let (out_send, out_recv) = channel();
 
-    thread::scope(|s| {
+    let mut stdin = std::io::stdin();
+    let mut stdout = std::io::stdout();
+
+    let should_exit = Arc::new(Mutex::new(false));
+    let compositor = compositor::Compositor::new(&in_queue, out_send);
+
+    let _ = crossbeam::thread::scope(|s| {
         s.spawn(|_| {
-            beam_io::command_processor(&mut stdout, &commands_queue, current_frame.clone())
+            let should_exit = should_exit.clone();
+            let _lock = should_exit.lock().unwrap();
+            beam_io::BeamReader::new(&mut stdin, &in_queue).read_loop();
         });
-        s.spawn(|_| beam_io::reader(&mut stdin, &commands_queue));
-        render_loop::run(current_frame.clone(), &commands_queue);
+        s.spawn(|_| {
+            beam_io::BeamWriter::new(&mut stdout, out_recv).flush_loop();
+        });
+        compositor.run(should_exit.clone());
     });
+
+    ()
 }

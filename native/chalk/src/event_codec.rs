@@ -3,64 +3,8 @@ use winit::event::{
     ElementState, Event, KeyboardInput, MouseButton, ScanCode, VirtualKeyCode, WindowEvent,
 };
 
-macro_rules! number {
-    ($n:expr) => {
-        Eterm::Integer($n as i32)
-    };
-}
-
-macro_rules! atom {
-    ($atom:expr) => {
-        Eterm::Atom(String::from($atom))
-    };
-}
-
-macro_rules! list {
-    () => {
-        Eterm::List(vec![Eterm::Nil])
-    };
-    // Strip trailing comma!
-    ($( $erl_list_elem:expr ),+,) => {
-        list!($( $erl_list_elem ),*);
-    };
-    ($( $erl_list_elem:expr ),*) => {
-        Eterm::List(vec![
-            $($erl_list_elem,)*
-            Eterm::Nil
-        ])
-    };
-}
-
-macro_rules! tuple {
-    // Single element tuple
-    ($erl_tuple_elem:expr) => {
-        Eterm::Tuple(vec![ $erl_tuple_elem ])
-    };
-    // Strip trailing comma!
-    ($( $erl_tuple_elem:expr ),+,) => {
-        tuple!({$( $erl_tuple_elem ),*});
-    };
-    ($( $erl_tuple_elem:expr ),*) => {
-        Eterm::Tuple(vec![
-            $($erl_tuple_elem,)*
-        ])
-    };
-}
-
-macro_rules! proplist {
-    ($({$key:expr,$val:expr},)*) => {
-        list! { $( tuple! { atom! { $key }, $val }, )* }
-    };
-
-}
-
-pub trait AsErlangTerm {
-    fn as_erlang_term(&self) -> Eterm;
-}
-
-pub trait TypeAsAtom {
-    fn type_as_atom(&self) -> Eterm;
-}
+use crate::beam_io::{AsErlangTerm, TypeAsAtom};
+use crate::command::CommandOut;
 
 impl AsErlangTerm for ScanCode {
     fn as_erlang_term(&self) -> Eterm {
@@ -353,16 +297,6 @@ impl<'a> AsErlangTerm for WindowEvent<'a> {
     }
 }
 
-/*
-impl<'a, T> AsErlangTerm for DeviceEvent<'a, T> {
-    fn as_erlang_term(&self) -> Eterm {
-        match self {
-            e @ DeviceEvent { .. } => e.as_erlang_term(),
-        }
-    }
-}
-*/
-
 impl AsErlangTerm for Event<'_, ()> {
     fn as_erlang_term(&self) -> Eterm {
         match self {
@@ -377,5 +311,17 @@ impl AsErlangTerm for Event<'_, ()> {
             Event::RedrawEventsCleared => atom! { "redraw_events_cleared" },
             Event::LoopDestroyed => atom! { "loop_destroyed" },
         }
+    }
+}
+
+pub fn to_command(e: Event<'_, ()>) -> Option<CommandOut> {
+    match e {
+        Event::LoopDestroyed => None,
+        Event::MainEventsCleared { .. } => None,
+        Event::NewEvents(_) => None,
+        Event::RedrawEventsCleared => None,
+        Event::RedrawRequested { .. } => None,
+        Event::UserEvent(_) => None,
+        _ => Some(CommandOut::Relay(e.as_erlang_term())),
     }
 }

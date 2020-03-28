@@ -1,90 +1,157 @@
 extern crate crossbeam;
 
-use std::io;
-use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crossbeam::queue::SegQueue;
+use crossbeam::queue::ArrayQueue;
+use erletf::{Decoder, Encoder, Eterm};
 
-use erletf::{Decoder, Encoder, Error, Eterm};
+#[macro_export]
+macro_rules! number {
+    ($n:expr) => {
+        Eterm::Integer($n as i32)
+    };
+}
 
-pub fn reader(stdin: &mut io::Stdin, command_queue: &SegQueue<Eterm>) -> Result<(), Error> {
-    let mut decoder = Decoder::new(stdin);
-    loop {
-        assert!(true == decoder.read_prelude()?);
-        let term = decoder.decode_term()?;
-        command_queue.push(term.clone());
+#[macro_export]
+macro_rules! bignum {
+    ($n:expr) => {
+        Eterm::BigNum(num::bigint::BigInt::from($n))
+    };
+}
+
+#[macro_export]
+macro_rules! atom {
+    ($atom:expr) => {
+        Eterm::Atom(String::from($atom))
+    };
+}
+
+#[macro_export]
+macro_rules! list {
+    () => {
+        Eterm::List(vec![Eterm::Nil])
+    };
+    // Strip trailing comma!
+    ($( $erl_list_elem:expr ),+,) => {
+        list!($( $erl_list_elem ),*);
+    };
+    ($( $erl_list_elem:expr ),*) => {
+        Eterm::List(vec![
+            $($erl_list_elem,)*
+            Eterm::Nil
+        ])
+    };
+}
+
+#[macro_export]
+macro_rules! tuple {
+    // Single element tuple
+    ($erl_tuple_elem:expr) => {
+        Eterm::Tuple(vec![ $erl_tuple_elem ])
+    };
+    // Strip trailing comma!
+    ($( $erl_tuple_elem:expr ),+,) => {
+        tuple!({$( $erl_tuple_elem ),*});
+    };
+    ($( $erl_tuple_elem:expr ),*) => {
+        Eterm::Tuple(vec![ $($erl_tuple_elem,)* ])
+    };
+}
+
+#[macro_export]
+macro_rules! proplist {
+    ($({$key:expr,$val:expr},)*) => {
+        list! { $( tuple! { atom! { $key }, $val }, )* }
+    };
+}
+
+pub trait AsErlangTerm {
+    fn as_erlang_term(&self) -> Eterm;
+}
+
+pub trait FromErlangTerm<T> {
+    fn from_erlang_term(t: Eterm) -> T;
+}
+
+pub trait TypeAsAtom {
+    fn type_as_atom(&self) -> Eterm;
+}
+
+pub struct BeamWriter<'a, T> {
+    encoder: Encoder<'a>,
+    // queue: &'a ArrayQueue<T>,
+    queue: std::sync::mpsc::Receiver<T>,
+}
+
+impl<'a, T: AsErlangTerm> BeamWriter<'a, T> {
+    pub fn new(
+        stdout: &'a mut std::io::Stdout,
+        // queue: &'a ArrayQueue<T>
+        queue: std::sync::mpsc::Receiver<T>,
+    ) -> BeamWriter<'a, T> {
+        BeamWriter {
+            encoder: Encoder::new(stdout, true, true, true),
+            queue: queue,
+        }
+    }
+
+    pub fn send(&mut self, value: Eterm) -> () {
+        self.encoder
+            .write_prelude()
+            .expect("Encoder failed to write communication prelude");
+        self.encoder
+            .encode_term(tuple! { bignum! { now() }, value })
+            .expect("Encoder could not encode term");
+        self.encoder.flush().expect("Encoder could not flush");
+    }
+
+    pub fn flush_loop(&mut self) -> () {
+        loop {
+            match self.queue.recv() {
+                Ok(t) => self.send(t.as_erlang_term()),
+                _ => (),
+            };
+        }
     }
 }
 
-pub fn command_processor(
-    stdout: &mut io::Stdout,
-    command_queue: &SegQueue<Eterm>,
-    current_frame: Arc<Mutex<Option<Vec<u8>>>>,
-) -> Result<(), Error> {
-    let mut encoder = Encoder::new(stdout, true, true, true);
-    loop {
-        let output = match command_queue.pop() {
-            Ok(Eterm::Tuple(tup)) if tup.len() > 1 => {
-                handle_command(tup.clone(), current_frame.clone())
-            }
-            _ => None,
-        };
-        match output {
-            Some(cmd) => {
-                encoder.write_prelude()?;
-                encoder.encode_term(cmd)?;
-                encoder.flush()?
-            }
-            _ => (),
+pub struct BeamReader<'a, T: FromErlangTerm<T> + 'static> {
+    decoder: Decoder<'a, std::io::Stdin>,
+    queue: &'a ArrayQueue<T>,
+}
+
+impl<'a, T: FromErlangTerm<T>> BeamReader<'a, T> {
+    pub fn new(stdin: &'a mut std::io::Stdin, queue: &'a ArrayQueue<T>) -> BeamReader<'a, T> {
+        BeamReader {
+            decoder: Decoder::new(stdin),
+            queue: queue,
+        }
+    }
+
+    pub fn read(&mut self) -> () {
+        self.decoder
+            .read_prelude()
+            .expect("Could not read Erlang prelude from stdin");
+        let term = self
+            .decoder
+            .decode_term()
+            .expect("Could not decode Erlang term, are you sure you sent it in binary form?");
+        let value: T = T::from_erlang_term(term);
+        self.queue.push(value);
+    }
+
+    pub fn read_loop(&mut self) -> () {
+        loop {
+            self.read();
+            thread::sleep(Duration::from_millis(1));
         }
     }
 }
 
-fn handle_command(cmd: Vec<Eterm>, current_frame: Arc<Mutex<Option<Vec<u8>>>>) -> Option<Eterm> {
-    if cmd.len() != 3 {
-        eprintln!("what: {:?}", cmd.clone());
-        return None;
-    };
-    let is_ref = {
-        let is_ref = match &cmd[0] {
-            Eterm::Tuple(parts) => match &parts[1] {
-                Eterm::Atom(is_ref) => is_ref.as_str(),
-                _ => "none",
-            },
-            _ => "none",
-        };
-        is_ref != "none"
-    };
-    let kind = {
-        match &cmd[1] {
-            Eterm::Tuple(parts) => match &parts[1] {
-                Eterm::Atom(kind) => kind.as_str(),
-                _ => "unknown",
-            },
-            _ => "unknown",
-        }
-    };
-    let data = {
-        if cmd.len() > 1 {
-            match &cmd[2] {
-                Eterm::Tuple(parts) if parts.len() > 0 => parts[1].clone(),
-                _ => atom! { "missing_data" },
-            }
-        } else {
-            atom! { "no_data" }
-        }
-    };
-    match (is_ref, kind, data) {
-        (_, "echo", data) => Some(tuple! { atom! { "echo" }, data.clone() }),
-        (_, "relay", _data) => Some(Eterm::Tuple(cmd.clone())),
-        (_, "render", term) => match term {
-            Eterm::Binary(raw_image) => {
-                let mut frame = current_frame.lock().unwrap();
-                *frame = Some(raw_image.to_vec());
-                Some(tuple! { atom! { "render_queued" } })
-            }
-            _ => Some(tuple! { atom! { "render_queue_failed" } }),
-        },
-        _ => None,
-    }
+fn now() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_nanos()
 }

@@ -12,12 +12,10 @@
 -export([ draw/0, dump/0, restart/0, start/0 ]).
 
 start() ->
-  random_walk_line:start_link([],[]),
-  chalk_pipeline:flush().
+  random_walk_line:start_link([],[]).
 
 restart() ->
   gen_server:stop(random_walk_line),
-  chalk_pipeline:clear(),
   start().
 
 %%==============================================================================
@@ -60,8 +58,7 @@ initial_state(_) ->
    }.
 
 do_init(State) ->
-  chalk_pipeline:register(fun () -> {ok, {0.0,0.0,0.0}, hex_lib:bg()} end),
-  chalk_pipeline:register(fun () -> random_walk_line:draw() end),
+  chalk_pipeline:register(fun random_walk_line:draw/0),
   State.
 
 do_draw(#{ pos := Pos

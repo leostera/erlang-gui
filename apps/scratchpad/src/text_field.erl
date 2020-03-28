@@ -24,6 +24,7 @@
         , restart/0
         , set_text/1
         , on_edit/1
+, print_event/1
         ]).
 
 %%==============================================================================
@@ -35,11 +36,12 @@ start_link(Args, Opts) ->
 
 init(Args) ->
   State = initial_state(Args),
-  chalk_pipeline:register(fun () -> text_field:draw() end),
-  chalk_event_server:register(self()),
+  chalk_pipeline:register(fun ?MODULE:draw/0),
+  chalk_event_server:register(fun ?MODULE:print_event/1),
   {ok, State}.
 
-terminate(_, _) -> ok.
+terminate(_, _) ->
+  ok.
 
 handle_call({on_edit, Fn}, _From, State) -> do_on_edit(Fn, State);
 handle_call({set_text, T}, _From, State) -> do_set_text(T, State);
@@ -47,14 +49,13 @@ handle_call(draw, _From, State) -> do_draw(State);
 handle_call(dump, _From, State) -> {reply, State, State};
 handle_call(_Msg, _From, State) -> {noreply, State}.
 
-handle_cast({{type, mouse_input}, [{state,pressed}|_]}, State) ->
-  io:format("received mouse input\n",[]),
+handle_cast({_,{{type, mouse_input}, [{state,pressed}|_]}}, State) ->
   {noreply, do_focus(State)};
-handle_cast({{type, cursor_moved}, [{x,X}, {y,Y}]}, State) ->
+handle_cast({Ts, {{type, cursor_moved}, [{x,X}, {y,Y}]}}=Ev, State) ->
   {noreply, do_update_cursor(State, {X,Y})};
 handle_cast({{type, keyboard_input},
-             [ {kind, organic},
-               {input, [_,{state,pressed}, {virtual_keycode, Key}]}
+             [ {kind, organic}
+             , {input, [_,{state,pressed}, {virtual_keycode, Key}]}
              ]}=Msg, State) ->
   {noreply, do_type(State, Key)};
 handle_cast({{type,_ }, _}=Msg, State) ->
@@ -66,10 +67,14 @@ handle_cast(_Msg, State) -> {noreply, State}.
 %% Api
 %%==============================================================================
 
+print_event(E={Ts,_}) ->
+  io:format("callback: ~pms\n", [(erlang:system_time()-Ts)/1000000]),
+  gen_server:cast(?MODULE, E).
+
 start() ->
-  text_field:start_link([],[]),
+  {ok, Pid} = text_field:start_link([],[]),
   text_field:set_text(lively:source_for_module(text_field)),
-  chalk_pipeline:flush().
+  {ok, Pid}.
 
 restart() ->
   gen_server:stop(text_field),
@@ -129,7 +134,6 @@ do_focus(State=#{ pos := {X, Y, _}
       io:format("hit: ~p\n",[{MX, MY}]),
       case {round(RelX/30), round(RelY/30)} of
         {Col, Line} when (Line > 0) and (Col > 0) ->
-          io:format("valid cursor: ~p\n",[{Line, Col}]),
           text:move_cursor(Text, {Line, Col});
         _ -> ok
       end,
@@ -146,7 +150,6 @@ do_update_cursor(State=#{ pos := {X, Y, _}, text := Text }, Pos={MX, MY}) ->
 
   case {round(RelX/30), round(RelY/30)} of
     {Col, Line} when (Line > 0) and (Col > 0) ->
-      io:format("valid cursor: ~p at ~p\n",[{Line, Col}, Pos]),
       text:move_cursor(Text, {Line, Col});
     _ -> ok
   end,
@@ -183,6 +186,7 @@ field(FontHeight, Dim={W, H}, Text, Status) ->
   % Draw text
 
   Canvas = sk_canvas:new(W, H),
+  sk_canvas:clip_rect(Canvas, W, H),
 
   DebugTextPaint = sk_paint:new(),
   sk_paint:set_style(DebugTextPaint, sk_paint:style_stroke_and_fill()),

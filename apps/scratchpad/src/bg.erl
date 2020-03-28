@@ -36,9 +36,7 @@ handle_cast(_Msg, State) -> {noreply, State}.
 %% Api
 %%==============================================================================
 
-start() ->
-  bg:start_link([],[]),
-  chalk:set_frame_rate(30.0).
+start() -> bg:start_link([],[]).
 
 restart() ->
   gen_server:stop(bg),
@@ -51,4 +49,4 @@ draw() -> gen_server:call(?MODULE, draw).
 %% Internal
 %%==============================================================================
 
-do_draw(State) -> {reply, {ok, {0.0,0.0,0.0}, hex_lib:bg()}, State}.
+do_draw(State) -> {reply, {new_frame, {0.0,0.0,0.0}, hex_lib:bg()}, State}.

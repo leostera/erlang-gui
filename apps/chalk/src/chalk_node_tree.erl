@@ -4,13 +4,29 @@
 
 new() -> setup().
 
-setup() ->
-  Refs = cets:new(16, <<"chalk_default_node_tree_update_table">>, [named_table, ordered_set, {read_concurrency, true}, {write_concurrency, true}, public]),
-  Zs = ets:new(chalk_default_node_tree_render_table, [named_table, ordered_set, {read_concurrency, true}, {write_concurrency, true}, public]),
-  #{ refs => Refs, render => Zs }.
+default_table_opts() ->
+  [ named_table
+  , ordered_set
+  , {read_concurrency, true}
+  , {write_concurrency, true}
+  , public
+  ].
 
-clear(#{ refs := RefTable, render := ZsTable }) ->
+setup() ->
+  Opts = default_table_opts(),
+  Cache = cets:new(2, <<"chalk_render_tree_cache">>, Opts),
+  Refs = cets:new(16, <<"chalk_render_tree_ref_table">>, Opts),
+  Zs = ets:new(chalk_render_tree_flush_table, Opts),
+  #{ refs => Refs
+   , cache => Cache
+   , render => Zs
+   }.
+
+clear(#{ refs := RefTable
+       , cache := Cache
+       , render := ZsTable }) ->
   cets:delete_all_objects(RefTable),
+  cets:delete_all_objects(Cache),
   ets:delete_all_objects(ZsTable),
   ok.
 
@@ -25,12 +41,21 @@ add(Fn, #{ refs := RefTable }) ->
   true = cets:insert(RefTable, {Ref, Fn}),
   {ok, Ref}.
 
-fold(F, #{ render := ZsTable, refs := RefTable }) ->
-  cets:foldl(fun ({Ref, Fn}, _) ->
-                case (catch Fn()) of
-                  {ok, {X,Y,Z}, Pic} -> KV = {{Z,Y,X,Ref}, Pic},
-                                      ets:insert(ZsTable, KV);
-                  _ -> ok
+fold(F, #{ render := ZsTable, refs := RefTable, cache := Cache }) ->
+  cets:foldl(fun
+               ({Ref, Fn}, _) ->
+                 case (catch Fn()) of
+                   cached ->
+                     {LastPos, LastPic} = cets:lookup(Cache, Ref),
+                     ets:insert(ZsTable, {key(LastPos, Ref), LastPic});
+
+                   {new_frame, NewPos, NewPic} ->
+                     KV = {key(NewPos, Ref), NewPic},
+                     cets:insert(Cache, {Ref, {NewPos, NewPic}}),
+                     ets:insert(ZsTable, KV),
+                     cets:insert(RefTable, {Ref, Fn});
+
+                   _ -> ok
                 end
             end, none, RefTable),
   ets:foldl(fun ({K,V}, Acc) -> F({unkey(K),V}), Acc end, none, ZsTable),

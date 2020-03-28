@@ -15,7 +15,6 @@
         , flush_many/0
         , clear/0
         , dump/0
-        , set_frame_rate/1
         , set_viewport_size/1
         , make_frame/2
         ]).
@@ -27,10 +26,11 @@
 initial_state() ->
   #{ nodes => chalk_node_tree:new()
    , size => {3840, 2160}
-   , frame_timer => none
    }.
 
-init(_Args) -> {ok, initial_state()}.
+init(_Args) ->
+  process_flag(priority, high),
+  {ok, initial_state()}.
 
 terminate(_, _) -> ok.
 
@@ -47,10 +47,6 @@ handle_call(flush, _From, State) ->
 handle_call(clear, _From, State) ->
   ok = do_clear(State),
   {reply, ok, State};
-
-handle_call({set_frame_rate, Rate}, _From, #{ frame_timer := TRef }=State) ->
-  {ok, Timer} = do_set_frame_rate(TRef, Rate),
-  {reply, ok, State#{ frame_timer => Timer }};
 
 handle_call({set_viewport_size, Size}, _From, State) ->
   {reply, ok, State#{ size => Size }}.
@@ -76,9 +72,6 @@ register(F) -> gen_server:call(?MODULE, {register, F}).
 
 dump() -> gen_server:call(?MODULE, dump).
 
-set_frame_rate(Rate) when is_float(Rate) ->
-  gen_server:call(?MODULE, {set_frame_rate, Rate}).
-
 set_viewport_size(Size={W, H}) when is_integer(W) and is_integer(H)
                                 and (W > 0) and (H > 0) ->
   gen_server:call(?MODULE, {set_viewport_size, Size}).
@@ -96,25 +89,17 @@ do_clear(#{ nodes := Nodes }) ->
   chalk_node_tree:clear(Nodes).
 
 do_flush(#{ nodes := Nodes, size := {W, H} }=State) ->
-  {Frame, T} = chalk_pipeline:make_frame(Nodes, {W, H}),
-  ok = chalk_port:render(Frame),
-  {ok, T, State}.
-
-do_set_frame_rate(none, Rate) ->
-  timer:apply_interval( round(1000 / Rate), ?MODULE, flush, []);
-do_set_frame_rate(TRef, Rate) ->
-  timer:cancel(TRef),
-  do_set_frame_rate(none, Rate).
+  Frame = chalk_pipeline:make_frame(Nodes, {W, H}),
+  {ok, Frame, State}.
 
 make_frame(Nodes, {W, H}) ->
   Canvas = sk_canvas:new(W, H),
   sk_canvas:clip_rect(Canvas, W, H),
-  {T, _} = timer:tc(chalk_node_tree,fold,
-    [
+  chalk_node_tree:fold(
     fun ({{X, Y, _Z}, Picture}) ->
         sk_canvas:translate(Canvas, X, Y),
         sk_canvas:draw_picture(Canvas, Picture),
         sk_canvas:translate(Canvas, -X, -Y)
-    end, Nodes]),
+    end, Nodes),
   Picture = sk_picture:from_canvas(Canvas),
-  {sk_picture:as_bytes(Picture), T}.
+  sk_picture:as_bytes(Picture).

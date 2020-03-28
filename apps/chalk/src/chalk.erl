@@ -2,6 +2,7 @@
 
 -export([ render/2
         , render/3
+        , reload/0
         , start/0
         , stop/0
         , set_frame_rate/1
@@ -10,6 +11,10 @@
 start() -> application:ensure_all_started(chalk).
 
 stop() -> application:stop(chalk).
+
+reload() ->
+  stop(),
+  start().
 
 set_frame_rate(X) -> chalk_pipeline:set_frame_rate(X).
 

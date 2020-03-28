@@ -15,6 +15,10 @@ new(Partitions, Prefix, Opts) ->
              end, #{}, lists:seq(0, Partitions)),
   #{ tables => Tables, partitions => Partitions }.
 
+delete(#{ tables := Ts }, Key) ->
+  [ ets:delete(T, Key) || {_, T} <- maps:to_list(Ts) ],
+  ok.
+
 delete_all_objects(#{ tables := Ts }) ->
   [ ets:delete_all_objects(T) || {_, T} <- maps:to_list(Ts) ],
   ok.
@@ -22,17 +26,31 @@ delete_all_objects(#{ tables := Ts }) ->
 lookup(#{ tables := Ts }, Key) ->
   lists:foldl(fun (T, []) -> ets:lookup(T, Key);
                   (_, Acc) -> Acc
-              end, [], Ts).
+              end, [], maps:values(Ts)).
 
-insert(#{ tables := Ts, partitions := Partitions }, KV) ->
-  T = random_table(Ts, Partitions),
-  ets:insert(T, KV).
+partition_residence(#{ tables := Ts }, Key) ->
+  lists:foldl(fun (T, none) ->
+                    case ets:lookup(T, Key) of
+                      [] -> none;
+                      _ -> {ok, T}
+                    end;
+                  (_, Acc) -> Acc
+              end, none, maps:values(Ts)).
+
+insert(S=#{ tables := Ts, partitions := Partitions }, {Key, Value}) ->
+  Table = case partition_residence(S, Key) of
+            {ok, T} -> T;
+            none -> random_table(Ts, Partitions)
+          end,
+  ets:insert(Table, {Key, Value}).
 
 foldl(Fn, _, #{ tables := Ts }) ->
   Self = self(),
   Links = [ spawn_link(fun () ->
+                           process_flag(priority, high),
                            ets:foldl(Fn, none, T),
-                           Self ! done
+                           Self ! done,
+                           process_flag(priority, normal)
                        end) || {_, T} <- maps:to_list(Ts) ],
   LinkCount = length(Links),
   await_results(LinkCount).

@@ -12,6 +12,7 @@
         ]).
 
 -export([ send/1
+        , dump/0
         , register/1
         ]).
 
@@ -26,14 +27,17 @@ stop() ->
   gen_server:stop(?MODULE).
 
 init(_) ->
-  {ok, #{ handlers => [] }}.
+  process_flag(priority, high),
+  {ok, initial_state()}.
 
 terminate(_, _) -> ok.
 
-handle_cast({send, Event}, State) -> {noreply, do_handle_event(Event, State)}.
+handle_cast(_Msg, State) -> {noreply, State}.
 
-handle_call({register, H}, _From, #{ handlers := Hs }=State) ->
-  {reply, ok, State#{ handlers => [H|Hs] }}.
+handle_call({send, Event}, _From, State) -> do_handle_event(Event, State);
+handle_call({register, H}, _From, State) -> do_register(H, State);
+handle_call(dump, _From, State) -> {reply, State, State};
+handle_call(_Msg, _From, State) -> {noreply, State}.
 
 handle_info(_, State) ->
   {ok, State}.
@@ -42,30 +46,59 @@ handle_info(_, State) ->
 %% Api
 %%==============================================================================
 
-send(Event) -> gen_server:abcast(?MODULE, {send, Event}).
+dump() -> gen_server:call(?MODULE, dump).
 
-register(H) -> gen_server:call(?MODULE, {register, H}).
+send(Event) -> gen_server:call(?MODULE, {send, Event}).
+
+register(F) when is_function(F) -> gen_server:call(?MODULE, {register, {self(), F}}).
 
 %%==============================================================================
 %% Internal
 %%==============================================================================
 
-do_handle_event({{type, resized}, [{w,W},{h,H}]}, State) ->
-  State#{ size => {W, H} };
-do_handle_event({{type, cursor_moved}, [{x,X},{y,Y}]}, State=#{ size := {W, H} }) ->
-  {X2, Y2} = scale_coords({W,H}, {X,Y}),
-  Event = {{type, cursor_moved}, [{x, X2}, {y, Y2}]},
-  fanout(Event, State),
-  State;
-do_handle_event(Event, State) ->
-  fanout(Event, State),
-  State.
+initial_state() ->
+  #{ handlers => cets:new( 2
+                         , <<"chalk_event_server">>
+                         , [{write_concurrency, true}, {read_concurrency, true}, ordered_set])
+   }.
 
-fanout(Event, #{ handlers := Hs }) ->
-  [ (catch gen_server:cast(H, Event)) || H <- Hs ].
+do_register(Handler, #{ handlers := Table }=State) ->
+  cets:insert(Table, Handler),
+  {reply, ok, State}.
+
+do_handle_event(Event={_Ts, {{type, resized}, [{w,W},{h,H}]}}, State) ->
+  (catch fanout(Event, State)),
+  {reply, ok, State#{ size => {W, H} }};
+
+do_handle_event({Ts, {{type, cursor_moved}, [{x,X},{y,Y}]}}
+                , State=#{ size := {W, H} }) ->
+  {X2, Y2} = scale_coords({W,H}, {X,Y}),
+  Event = {Ts, {{type, cursor_moved}, [{x, X2}, {y, Y2}]}},
+  %io:format("chalk_event_server:do_handle_event/2:\t~pms\n", [(erlang:system_time() - Ts)/1000000]),
+  (catch fanout(Event, State)),
+  {reply, ok, State};
+
+do_handle_event(Event, State) ->
+  (catch fanout(Event, State)),
+  {reply, ok, State}.
+
+%%==============================================================================
+%% Utilities
+%%==============================================================================
+
+fanout(Event, #{ handlers := Table }) ->
+  Cleanup = cets:foldl(fun ({Pid, Handler}, DeadPids) ->
+                           case is_process_alive(Pid) of
+                             true -> (catch Handler(Event)), DeadPids;
+                             false -> [Pid | DeadPids]
+                           end
+                       end, [], Table),
+  [ cets:delete(Table, Pid) || Pid <- Cleanup ],
+  ok.
+
 
 scale_coords({W, H}, {X, Y}) ->
   MaxW = 3840,
   MaxH = 2160,
-  { MaxW/W * X, MaxH / H * Y }.
+  { round(MaxW/W * X), round(MaxH / H * Y) }.
 

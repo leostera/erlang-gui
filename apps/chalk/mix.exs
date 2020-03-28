@@ -16,7 +16,7 @@ defmodule Chalk.MixProject do
       deps: deps(),
       compilers: [:rustler] ++ Mix.compilers(),
       rustler_crates: [
-        gui: [mode: @rustler_mode, path: "../../native/erlang-gui"]
+        gui: [mode: @rustler_mode, path: "../../native/chalk"]
       ]
     ]
   end

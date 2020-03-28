@@ -14,7 +14,8 @@ defmodule ErlangGUI.MixProject do
       {
         :rustler,
         path: "/home/ostera/repos/github.com/rusterlium/rustler/rustler_mix/"
-      }
+      },
+      {:eflame, []}
     ]
   end
 end

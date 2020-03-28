@@ -188,6 +188,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
+name = "chalk"
+version = "0.1.0"
+dependencies = [
+ "crossbeam",
+ "crossbeam-utils",
+ "erlang-etf",
+ "lazy_static",
+ "num",
+ "rustler 0.21.0",
+ "skia-safe",
+ "skulpin",
+ "winit",
+]
+
+[[package]]
 name = "clang-sys"
 version = "0.28.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -435,17 +450,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "erlang-gui"
+name = "erlang-fastmaps"
 version = "0.1.0"
 dependencies = [
- "crossbeam",
- "crossbeam-utils",
- "erlang-etf",
- "lazy_static",
- "rustler 0.21.0",
- "skia-safe",
- "skulpin",
- "winit",
+ "rustler 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

@@ -2,6 +2,7 @@
 members = [
   "native/erlang-etf",
   "native/erlang-skia",
-  "native/erlang-gui",
+  "native/chalk",
   "native/erlang-binary-buffer",
+  "native/erlang-fastmap",
 ]

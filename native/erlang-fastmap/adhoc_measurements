@@ -1,0 +1,58 @@
+
+
+:ok
+iex(72)> :chalk_pipeline.flush()
+ets:foldl(RefTable)/3: 177443μs
+ets:foldl(ZsTable)/3: 143250μs
+ets:delete_all_objects(ZsTable)/1: 2386μs
+chalk_node_tree:fold/2: 323340μs
+:ok
+iex(73)> :chalk_pipeline.flush()
+ets:foldl(RefTable)/3: 198675μs
+ets:foldl(ZsTable)/3: 138579μs
+ets:delete_all_objects(ZsTable)/1: 2563μs
+chalk_node_tree:fold/2: 340031μs
+:ok
+iex(74)> :chalk_pipeline.flush()
+ets:foldl(RefTable)/3: 153315μs
+ets:foldl(ZsTable)/3: 138704μs
+ets:delete_all_objects(ZsTable)/1: 2305μs
+chalk_node_tree:fold/2: 294503μs
+:ok
+iex(75)> :chalk_pipeline.flush()
+ets:foldl(RefTable)/3: 171214μs
+ets:foldl(ZsTable)/3: 138004μs
+ets:delete_all_objects(ZsTable)/1: 2329μs
+chalk_node_tree:fold/2: 311726μs
+:ok
+iex(76)> :chalk_pipeline.flush()
+ets:foldl(RefTable)/3: 163669μs
+ets:foldl(ZsTable)/3: 136084μs
+ets:delete_all_objects(ZsTable)/1: 2483μs
+chalk_node_tree:fold/2: 302401μs
+:ok
+iex(77)> :chalk_pipeline.flush()
+ets:foldl(RefTable)/3: 169439μs
+ets:foldl(ZsTable)/3: 140163μs
+ets:delete_all_objects(ZsTable)/1: 2389μs
+chalk_node_tree:fold/2: 312221μs
+:ok
+iex(78)> :chalk_pipeline.flush()
+ets:foldl(RefTable)/3: 171689μs
+ets:foldl(ZsTable)/3: 137483μs
+ets:delete_all_objects(ZsTable)/1: 2229μs
+chalk_node_tree:fold/2: 311571μs
+:ok
+iex(79)> :chalk_pipeline.flush()
+ets:foldl(RefTable)/3: 164254μs
+ets:foldl(ZsTable)/3: 134794μs
+ets:delete_all_objects(ZsTable)/1: 2538μs
+chalk_node_tree:fold/2: 301790μs
+:ok
+iex(80)> :chalk_pipeline.flush()
+ets:foldl(RefTable)/3: 158206μs
+ets:foldl(ZsTable)/3: 138336μs
+ets:delete_all_objects(ZsTable)/1: 2244μs
+chalk_node_tree:fold/2: 298961μs
+:ok
+

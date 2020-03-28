@@ -2,3 +2,4 @@ _build
 deps
 priv
 target
+.Rproj.user

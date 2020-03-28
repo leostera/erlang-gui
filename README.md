@@ -33,4 +33,4 @@ abstractions to efficiently build and run GUI applications that continue to
 enjoy [The Free Lunch](the free lunch is over link).
 
 In addition, the process will help evaluate the difficulties in extending an
-actor runtime system to access native resources with low overhead.
+actor runtime system to access native resources with minimum overhead.

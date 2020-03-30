@@ -50,9 +50,6 @@ restart() ->
 
 draw() -> gen_server:call(?MODULE, draw).
 
-handle_event(Event={Ts, {{type, cursor_moved}, [{x,X}, {y,Y}]}}) ->
-  gen_server:call(?MODULE, {move_cursor, {X,Y}, Ts}).
-
 %%==============================================================================
 %% Internal
 %%==============================================================================
@@ -64,12 +61,18 @@ initial_state(_) ->
    , crosshair => crosshair({1000.0, 1000.0, 10.0})
    }.
 
+handle_event({Ts, {{type, cursor_moved}, [{x,X}, {y,Y}]}}) ->
+  gen_server:call(?MODULE, {move_cursor, {X,Y}, Ts}).
+
 do_cursor_move({X, Y}, Ts, State) ->
   %io:format("mouse_coords:do_cursor_move/3:\t\t~pms (since event ocurred)\n\n", [(erlang:system_time() - Ts)/1000000]),
-  {reply, ok, State#{ pos => {X * 1.0, Y * 1.0, 1.0}
-                    , last_event_time => Ts
-                    , crosshair => crosshair({X, Y, 0.0})
-                    }}.
+  { reply
+  , ok
+  , State#{ pos => {X * 1.0, Y * 1.0, 1.0}
+          , last_event_time => Ts
+          , crosshair => crosshair({X, Y, 0.0})
+          }
+  }.
 
 do_draw(#{ pos := {X,Y,Z} = _Pos
          , time := _LastRenderTime
@@ -77,7 +80,10 @@ do_draw(#{ pos := {X,Y,Z} = _Pos
          , crosshair := Crosshair
          }=State) ->
   Now = erlang:system_time(),
-  {reply, {new_frame, {X - 50.0, Y - 50.0, Z}, Crosshair}, State#{ time => Now }}.
+  { reply
+  , { new_frame, {X - 50.0, Y - 50.0, Z}, Crosshair }
+  , State#{ time => Now }
+  }.
 
 
 crosshair({X, Y, _}) ->

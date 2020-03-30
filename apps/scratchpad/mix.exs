@@ -17,7 +17,8 @@ defmodule ScratchPad.MixProject do
 
   def application do
     [
-      extra_applications: [:logger]
+      mod: {:scratchpad_app, []},
+      extra_applications: [:logger, :chalk]
     ]
   end
 

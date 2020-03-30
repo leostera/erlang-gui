@@ -44,19 +44,19 @@ add(Fn, #{ refs := RefTable }) ->
 fold(F, #{ render := ZsTable, refs := RefTable, cache := Cache }) ->
   cets:foldl(fun
                ({Ref, Fn}, _) ->
-                 case (catch Fn()) of
-                   cached ->
-                     {LastPos, LastPic} = cets:lookup(Cache, Ref),
-                     ets:insert(ZsTable, {key(LastPos, Ref), LastPic});
+                 (catch (case Fn() of
+                           cached ->
+                             [{_, {LastPos, LastPic}}] = cets:lookup(Cache, Ref),
+                             ets:insert(ZsTable, {key(LastPos, Ref), LastPic});
 
-                   {new_frame, NewPos, NewPic} ->
-                     KV = {key(NewPos, Ref), NewPic},
-                     cets:insert(Cache, {Ref, {NewPos, NewPic}}),
-                     ets:insert(ZsTable, KV),
-                     cets:insert(RefTable, {Ref, Fn});
+                           {new_frame, NewPos, NewPic} ->
+                             KV = {key(NewPos, Ref), NewPic},
+                             cets:insert(Cache, {Ref, {NewPos, NewPic}}),
+                             ets:insert(ZsTable, KV),
+                             cets:insert(RefTable, {Ref, Fn});
 
-                   _ -> ok
-                end
+                           _ -> ok
+                         end))
             end, none, RefTable),
   ets:foldl(fun ({K,V}, Acc) -> F({unkey(K),V}), Acc end, none, ZsTable),
   ets:delete_all_objects(ZsTable),

@@ -130,15 +130,16 @@ impl<'a, T: FromErlangTerm<T>> BeamReader<'a, T> {
     }
 
     pub fn read(&mut self) -> () {
-        self.decoder
-            .read_prelude()
-            .expect("Could not read Erlang prelude from stdin");
-        let term = self
-            .decoder
-            .decode_term()
-            .expect("Could not decode Erlang term, are you sure you sent it in binary form?");
-        let value: T = T::from_erlang_term(term);
-        self.queue.push(value);
+        match self.decoder.read_prelude() {
+            Ok(_) => {
+                let term = self.decoder.decode_term().expect(
+                    "Could not decode Erlang term, are you sure you sent it in binary form?",
+                );
+                let value: T = T::from_erlang_term(term);
+                self.queue.push(value);
+            }
+            Err(_) => std::process::exit(1),
+        }
     }
 
     pub fn read_loop(&mut self) -> () {

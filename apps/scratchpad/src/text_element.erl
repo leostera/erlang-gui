@@ -20,6 +20,7 @@
 %%
 
 draw(#{ dim := Dim={W,H}
+      , lines := {From, To}
       , text := Text
       , font_height := FontHeight
       }=State) ->
@@ -45,6 +46,6 @@ draw(#{ dim := Dim={W,H}
                                , Offset*FontHeight
                                , TextPaint),
        Offset+1
-   end, 1, text:lines(Text)),
+   end, 1, text:lines(Text, {From, To})),
 
   sk_picture:from_canvas(Canvas).

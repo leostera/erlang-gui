@@ -18,6 +18,7 @@
         , delete/1
         , dump/1
         , lines/1
+        , lines/2
         , move_cursor/2
         , of_binary/1
         , as_binary/1
@@ -38,6 +39,7 @@ terminate(_, _) -> ok.
 
 handle_call(as_binary, _From, State) -> do_as_binary(State);
 handle_call(cursor, _From, State) -> do_cursor(State);
+handle_call({lines, Range}, _From, State) -> do_lines(Range, State);
 handle_call(lines, _From, State) -> do_lines(State);
 handle_call(delete, _From, State) -> do_delete(State);
 handle_call({write, T}, _From, State) -> do_write(T, State);
@@ -81,6 +83,9 @@ delete(Pid) when is_pid(Pid) -> gen_server:call(Pid, delete).
 
 lines(Pid) when is_pid(Pid) -> gen_server:call(Pid, lines).
 
+lines(Pid, {From, To}) when is_pid(Pid) and (From > 0) and (To > 0) ->
+  gen_server:call(Pid, {lines, {From, To}}).
+
 cursor(Pid) when is_pid(Pid) -> gen_server:call(Pid, cursor).
 
 
@@ -98,6 +103,11 @@ do_as_binary(State=#{ buffer := Buff }) ->
   {reply, text_buffer:text(Buff), State}.
 
 do_cursor(State=#{ cursor := C }) -> {reply, C, State}.
+
+do_lines({From, To}, State=#{ buffer := Buff }) ->
+  Lines = text_buffer:lines(Buff),
+  Range = lists:sublist(Lines, From, To),
+  {reply, Range, State}.
 
 do_lines(State=#{ buffer := Buff }) ->
   {reply, text_buffer:lines(Buff), State}.

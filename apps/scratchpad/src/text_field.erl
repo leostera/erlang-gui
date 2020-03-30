@@ -67,9 +67,7 @@ handle_cast(_Msg, State) -> {noreply, State}.
 %% Api
 %%==============================================================================
 
-print_event(E={Ts,_}) ->
-  io:format("callback: ~pms\n", [(erlang:system_time()-Ts)/1000000]),
-  gen_server:cast(?MODULE, E).
+print_event(E) -> gen_server:cast(?MODULE, E).
 
 start() ->
   {ok, Pid} = text_field:start_link([],[]),
@@ -94,6 +92,7 @@ on_edit(Fn) -> gen_server:call(?MODULE, {on_edit, Fn}).
 
 initial_state(_) ->
   #{ pos => {200.0, 200.0, 1.0}
+   , should_redraw => true
    , font_height => 30
    , dim => {1000, 1000}
    , mouse_pos => {0.0, 0.0}
@@ -148,18 +147,29 @@ do_update_cursor(State=#{ pos := {X, Y, _}, text := Text }, Pos={MX, MY}) ->
   RelX = MX - X,
   RelY = MY - Y,
 
-  case {round(RelX/30), round(RelY/30)} of
-    {Col, Line} when (Line > 0) and (Col > 0) ->
-      text:move_cursor(Text, {Line, Col});
-    _ -> ok
-  end,
+  ShouldRedraw = case {round(RelX/30), round(RelY/30)} of
+                   {Col, Line} when (Line > 0) and (Col > 0) ->
+                     text:move_cursor(Text, {Line, Col}),
+                     true;
+                   _ -> false
+                 end,
 
-  State#{ mouse_pos => Pos }.
+  State#{ mouse_pos => Pos
+        , should_redraw => ShouldRedraw }.
 
 do_set_text(Text, State=#{ font_height := H }) ->
   Buff = text:of_binary(Text),
+  Dim = {1000, length(text:lines(Buff)) * H + H },
+  TextElement = text_element:draw(#{ dim => Dim
+                                   , lines => {1, 60}
+                                   , text => Buff
+                                   , font_height => H
+                                   }),
+
   State2 = State#{ text => Buff
-                 , dim  => {1000, length(text:lines(Buff)) * H + H }
+                 , dim  => Dim
+                 , text_element => TextElement
+                 , should_redraw => true
                  },
   {reply, ok, State2}.
 
@@ -167,24 +177,27 @@ do_draw(#{ pos := Pos
          , dim := Dim
          , time := _
          , text := Text
+         , text_element := TextElement
          , status := Status
          , font_height := FontHeight
+         , should_redraw := true
          }=State) ->
   Now = erlang:system_time(),
+  Field = field(FontHeight, Dim, Text, TextElement, Status),
+  DrawTime = erlang:system_time(),
+  io:format("text_field:field/5: ~pms\n", [(DrawTime-Now)/1000000]),
   { reply
-  , {ok, Pos, field(FontHeight, Dim, Text, Status)}
-  , State#{ time => Now }}.
+  , { new_frame, Pos, Field }
+  , State#{ time => Now
+          , should_redraw => false
+          }
+  };
+do_draw(State) -> {reply, cached, State}.
 
-field(FontHeight, Dim={W, H}, Text, Status) ->
+field(FontHeight, Dim={W, H}, Text, TextElement, Status) ->
   LineCount = length(text:lines(Text)),
 
-  TextElement = text_element:draw(#{ dim => Dim
-                                   , text => Text
-                                   , font_height => FontHeight
-                                   }),
-
   % Draw text
-
   Canvas = sk_canvas:new(W, H),
   sk_canvas:clip_rect(Canvas, W, H),
 

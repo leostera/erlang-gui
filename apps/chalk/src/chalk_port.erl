@@ -38,7 +38,10 @@ terminate(_, #{ port := Port }) ->
 
 handle_info({_Port, {data, Ev}}, State) ->
   T0 = erlang:system_time(),
-  (catch handle_event(T0, Ev, State)),
+  case (catch handle_event(T0, Ev, State)) of
+    {'EXIT', Err} -> io:format("~p\n", [Err]);
+    _ -> ok
+  end,
   {noreply, State};
 handle_info({'EXIT', _Port, _Reason}, _State) ->
   {noreply, #{ port => none }}.
@@ -68,43 +71,61 @@ request_flush() ->
 handle_event(T0, RawEv, State) when is_binary(RawEv) ->
   {Ts, Event} = binary_to_term(RawEv),
   T1 = erlang:system_time(),
-  %io:format("rust:event_dispatching:\t~pms\n", [(Ts - HappenedAt)/1000000]),
-  %io:format("erlang:port_receive:\t\t\t~pms\n", [(T0-Ts)/1000000]),
-  %io:format("erlang:binary_to_term:\t\t\t~pms\n", [(T1-T0)/1000000]),
-  dispatch_event({T0, T1}, {Ts, Event}, State),
-  ok.
+  %io:format("\n\n\nEVENT: \n\n~p\n\n\n", [{Ts, Event}]),
+  case ((T1 - Ts)/1000000) > 2 of
+    true -> ok;
+    _ -> dispatch_event({T0, T1, byte_size(RawEv)}, {Ts, Event}, State)
+  end.
 
 %% Render events
 dispatch_event(_, {_, {{ts, _}, {kind, notice}, {data, render_queued}}}, _) ->
   ok;
-dispatch_event(_, {_, {{ts, _}, {kind, command}, {command, request_frame}}}, State) ->
-  do_render(State);
+dispatch_event({T0, T1, Size}, {Ts, {{ts, HappenedAt}, {kind, command}, {command, request_frame}}}, State) ->
+  Frame = chalk_pipeline:flush(),
+  T2 = erlang:system_time(),
+  {MsgSize, T3, T4} = do_render(Frame, State),
+  %io:format("\n\nrust:event_dispatching:\t~pms\n", [(Ts - HappenedAt)/1000000]),
+  %io:format("erlang:port_receive:\t~pms\n", [(T0-Ts)/1000000]),
+  %{_, MsgCount} = process_info(whereis(chalk_port), message_queue_len),
+  %io:format("port:message_queue_len:\t~p\n", [MsgCount]),
+
+  %io:format("erlang:msg_byte_size:\t~p bytes\n", [Size]),
+  %io:format("erlang:binary_to_term:\t~pms\n", [(T1-T0)/1000000]),
+  %io:format("chalk_pipeline:flush/0:\t~pms\n", [(T2 - T1)/1000000]),
+  %io:format("erlang:term_to_binary:\t~pms\n", [(T3-T2)/1000000]),
+  %io:format("erlang:msg_byte_size:\t~p bytes\n", [MsgSize]),
+  %io:format("erlang:port_command/1:\t~pms\n", [(T4 - T3)/1000000]),
+  ok;
 
 %% Droppable events
 dispatch_event(_, {_,{{ts, _}, {kind, relay}, {data, device_event}}}, _) ->
   ok;
 
 %% Relay Events
-dispatch_event({T0,T1}, {Ts, {{ts, HappenedAt}, {kind, relay}, {data, E}}}, State) ->
-  do_forward_event({HappenedAt, E}, State),
+dispatch_event({T0,T1, Size}, {Ts, {{ts, HappenedAt}, {kind, relay}, {data, E}}}, State) ->
+  ok = chalk_event_server:send({Ts, E}),
   T2 = erlang:system_time(),
-  %io:format("chalk_port:dispatch_event/2:\t\t~pms\n", [(T2 - T1)/1000000]),
+  %io:format("\n\nrust:event_dispatching:\t~pms\n", [(Ts - HappenedAt)/1000000]),
+  %io:format("erlang:msg_byte_size:\t~p bytes\n", [Size]),
+  %io:format("erlang:port_receive:\t~pms\n", [(T0-Ts)/1000000]),
+  %io:format("erlang:binary_to_term:\t~pms\n", [(T1-T0)/1000000]),
+  %io:format("chalk_port:do_fw_evt/2:\t~pms\n", [(T2 - T1)/1000000]),
   ok;
 
 %% Ignore the rest
 dispatch_event(_, _, _) -> ok.
 
 
-do_forward_event(Event, _State) ->
-  chalk_event_server:send(Event).
-
 do_render(#{ port := Port }) ->
   Frame = chalk_pipeline:flush(),
-  ok = do_command(Port, render, Frame).
+  do_command(Port, render, Frame).
+do_render(Frame, #{ port := Port }) ->
+  do_command(Port, render, Frame).
 
 do_command(Port, Kind, Data) ->
-  Ref = make_ref(),
-  Cmd = {{ref,Ref}, {kind,Kind}, {data,Data}},
+  Cmd = {{ref,0}, {kind,Kind}, {data,Data}},
   Msg = term_to_binary(Cmd),
+  T0 = erlang:system_time(),
   port_command(Port, Msg),
-  ok.
+  T1 = erlang:system_time(),
+  {byte_size(Msg), T0, T1}.

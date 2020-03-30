@@ -32,15 +32,16 @@ init(_) ->
 
 terminate(_, _) -> ok.
 
+handle_cast({send, Event}, State) ->
+  NewState = do_handle_event(Event, State),
+  {noreply, NewState};
 handle_cast(_Msg, State) -> {noreply, State}.
 
-handle_call({send, Event}, _From, State) -> do_handle_event(Event, State);
 handle_call({register, H}, _From, State) -> do_register(H, State);
 handle_call(dump, _From, State) -> {reply, State, State};
 handle_call(_Msg, _From, State) -> {noreply, State}.
 
-handle_info(_, State) ->
-  {ok, State}.
+handle_info(_, State) -> {noreply, State}.
 
 %%==============================================================================
 %% Api
@@ -48,7 +49,7 @@ handle_info(_, State) ->
 
 dump() -> gen_server:call(?MODULE, dump).
 
-send(Event) -> gen_server:call(?MODULE, {send, Event}).
+send(Event) -> gen_server:cast(?MODULE, {send, Event}).
 
 register(F) when is_function(F) -> gen_server:call(?MODULE, {register, {self(), F}}).
 
@@ -67,34 +68,38 @@ do_register(Handler, #{ handlers := Table }=State) ->
   {reply, ok, State}.
 
 do_handle_event(Event={_Ts, {{type, resized}, [{w,W},{h,H}]}}, State) ->
-  (catch fanout(Event, State)),
-  {reply, ok, State#{ size => {W, H} }};
+  NewState = State#{ size => {W, H} },
+  fanout(Event, NewState),
+  NewState;
 
 do_handle_event({Ts, {{type, cursor_moved}, [{x,X},{y,Y}]}}
-                , State=#{ size := {W, H} }) ->
+                 , State=#{ size := {W, H} }) ->
   {X2, Y2} = scale_coords({W,H}, {X,Y}),
   Event = {Ts, {{type, cursor_moved}, [{x, X2}, {y, Y2}]}},
-  %io:format("chalk_event_server:do_handle_event/2:\t~pms\n", [(erlang:system_time() - Ts)/1000000]),
-  (catch fanout(Event, State)),
-  {reply, ok, State};
+  fanout(Event, State),
+  State;
 
 do_handle_event(Event, State) ->
-  (catch fanout(Event, State)),
-  {reply, ok, State}.
+  fanout(Event, State),
+  State.
 
 %%==============================================================================
 %% Utilities
 %%==============================================================================
 
 fanout(Event, #{ handlers := Table }) ->
-  Cleanup = cets:foldl(fun ({Pid, Handler}, DeadPids) ->
+  cets:foldl(fun ({Pid, Handler}, _) ->
+                 spawn(fun () ->
                            case is_process_alive(Pid) of
-                             true -> (catch Handler(Event)), DeadPids;
-                             false -> [Pid | DeadPids]
+                             true ->
+                               case (catch Handler(Event)) of
+                                 {'EXIT', _} -> cets:delete(Table, Pid);
+                                 _ -> ok
+                               end;
+                             false -> cets:delete(Table, Pid)
                            end
-                       end, [], Table),
-  [ cets:delete(Table, Pid) || Pid <- Cleanup ],
-  ok.
+                       end)
+             end, ok, Table).
 
 
 scale_coords({W, H}, {X, Y}) ->

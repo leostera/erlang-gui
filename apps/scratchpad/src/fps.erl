@@ -56,7 +56,7 @@ do_draw(State=#{ time := T0, counter := C0, frame := F0 }) ->
                              false -> {F0, C0+1, T0}
                            end,
   { reply
-  , {ok, {0.0,90.0,0.0}, F1}
+  , {new_frame, {0.0,90.0,0.0}, F1}
   , State#{ frame => F1
           , counter => C1
           , time => T1 }}.

@@ -24,10 +24,10 @@ pub struct Compositor<'a> {
 
     window: Window,
 
-    current_frame: Option<Picture>,
+    current_frame: Picture,
+    last_frame_request_time: u128,
 
     commands_in: &'a ArrayQueue<CommandIn>,
-    // commands_out: &'a ArrayQueue<CommandOut>,
     commands_out: std::sync::mpsc::Sender<CommandOut>,
 
     fps_counter: FpsCounter,
@@ -41,7 +41,9 @@ impl<'a> Compositor<'a> {
     ) -> Compositor<'a> {
         let event_loop = EventLoop::<()>::with_user_event();
 
-        let logical_size = LogicalSize::new(3840.0, 2160.0);
+        let w = 3840.0;
+        let h = 2160.0;
+        let logical_size = LogicalSize::new(w, h);
 
         let visible_range = Rect {
             left: 0.0,
@@ -67,7 +69,7 @@ impl<'a> Compositor<'a> {
             .build(&window)
             .unwrap();
 
-        let current_frame = None;
+        let current_frame = Picture::new_placeholder(Rect::new(0.0, 0.0, w, h));
 
         let fps_counter = FpsCounter::new();
 
@@ -76,6 +78,7 @@ impl<'a> Compositor<'a> {
             commands_out,
             current_frame,
             event_loop: Some(event_loop),
+            last_frame_request_time: 0,
             fps_counter,
             renderer,
             window,
@@ -95,42 +98,47 @@ impl<'a> Compositor<'a> {
             })
     }
 
-    pub fn handle_commands(&mut self) -> () {
+    pub fn handle_commands(&mut self, current_frame_time: u128) -> () {
         match self.commands_in.pop() {
-            Ok(cmd) => {
-                let reply = match cmd {
-                    CommandIn::Echo(term) => CommandOut::Echo(term),
-                    CommandIn::Render(new_frame) => {
-                        self.current_frame = Some(new_frame);
-                        self.window.request_redraw();
-                        CommandOut::RenderQueued
-                    }
-                };
-                self.commands_out.send(reply);
+            Ok(CommandIn::Echo(term)) => {
+                self.commands_out.send(CommandOut::Echo(term));
+            }
+            Ok(CommandIn::Render(new_frame)) => {
+                self.current_frame = new_frame;
+                self.commands_out.send(CommandOut::RequestFrame);
+                self.window.request_redraw();
+                self.last_frame_request_time = current_frame_time;
             }
             _ => (),
         };
     }
 
     pub fn step(&mut self, event: Event<'_, ()>) -> () {
-        self.handle_commands();
+        let current_frame_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_millis();
+
+        self.handle_commands(current_frame_time);
+
         match event {
             Event::MainEventsCleared => {
                 self.window.request_redraw();
             }
 
             Event::RedrawRequested(_windows_id) => {
+                if (current_frame_time - self.last_frame_request_time > 6) {
+                    self.commands_out.send(CommandOut::RequestFrame);
+                }
+
                 let current_frame = &mut self.current_frame;
                 let commands_out = &mut self.commands_out;
                 let fps = &mut self.fps_counter;
                 self.renderer
-                    .draw(&self.window, |mut canvas, _coordinate_system_helper| {
-                        if let Some(frame) = current_frame {
-                            frame.playback(&mut canvas);
-                        }
+                    .draw(&self.window, |canvas, _coordinate_system_helper| {
+                        canvas.draw_picture(current_frame, None, None);
                         fps.tick();
                         fps.draw(canvas);
-                        commands_out.send(CommandOut::RequestFrame);
                     });
             }
 

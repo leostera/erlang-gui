@@ -16,11 +16,11 @@ new(Partitions, Prefix, Opts) ->
   #{ tables => Tables, partitions => Partitions }.
 
 delete(#{ tables := Ts }, Key) ->
-  [ ets:delete(T, Key) || {_, T} <- maps:to_list(Ts) ],
+  [ (catch ets:delete(T, Key)) || T <- maps:values(Ts) ],
   ok.
 
 delete_all_objects(#{ tables := Ts }) ->
-  [ ets:delete_all_objects(T) || {_, T} <- maps:to_list(Ts) ],
+  [ ets:delete_all_objects(T) || T <- maps:values(Ts) ],
   ok.
 
 lookup(#{ tables := Ts }, Key) ->
@@ -51,12 +51,12 @@ foldl(Fn, _, #{ tables := Ts }) ->
                            ets:foldl(Fn, none, T),
                            Self ! done,
                            process_flag(priority, normal)
-                       end) || {_, T} <- maps:to_list(Ts) ],
+                       end) || T <- maps:values(Ts) ],
   LinkCount = length(Links),
-  await_results(LinkCount).
+  await_results(LinkCount, []).
 
-await_results(0) -> ok;
-await_results(C) -> receive _ -> await_results(C-1) end.
+await_results(0, Acc) -> Acc;
+await_results(C, Acc) -> receive Res -> await_results(C-1, [Res|Acc]) end.
 
 
 random_table(Ts, Partitions) ->

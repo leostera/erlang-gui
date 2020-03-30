@@ -34,8 +34,8 @@ init([]) ->
 %%====================================================================
 
 supervision_flags() -> #{ strategy  => one_for_all
-                        , intensity => 0
-                        , period    => 1
+                        , intensity => 5
+                        , period    => 2
                         }.
 
 child_specs() ->

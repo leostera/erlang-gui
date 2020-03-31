@@ -3,3 +3,4 @@ deps
 priv
 target
 .Rproj.user
+*.mmap

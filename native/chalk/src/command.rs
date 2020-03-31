@@ -113,7 +113,10 @@ impl FromErlangTerm<CommandIn> for CommandIn {
                     _ => panic!("We can only turn echo and render commands from Erlang"),
                 }
             }
-            _ => panic!("Malformed command! Are you sure you're sending the right tuples?"),
+            term => panic!(
+                "Malformed command! Are you sure you're sending the right tuples?\n{:?}",
+                term
+            ),
         }
     }
 }

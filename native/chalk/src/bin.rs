@@ -1,10 +1,12 @@
 extern crate crossbeam;
 extern crate crossbeam_utils;
 
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::fs::OpenOptions;
+use std::io::{BufReader, BufWriter};
+use std::path::PathBuf;
+use std::sync::{mpsc::channel, Arc, Mutex};
 
-use std::sync::mpsc::channel;
+use memmap::{Mmap, MmapMut};
 
 #[macro_use]
 mod beam_io;
@@ -19,9 +21,6 @@ pub fn main() {
 
     let (out_send, out_recv) = channel();
 
-    let mut stdin = std::io::stdin();
-    let mut stdout = std::io::stdout();
-
     let should_exit = Arc::new(Mutex::new(false));
     let compositor = compositor::Compositor::new(&in_queue, out_send);
 
@@ -29,11 +28,38 @@ pub fn main() {
         s.spawn(|_| {
             let should_exit = should_exit.clone();
             let _lock = should_exit.lock().unwrap();
-            beam_io::BeamReader::new(&mut stdin, &in_queue).read_loop();
+
+            let file = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(PathBuf::from(
+                    "/home/ostera/repos/github.com/ostera/erlang-gui/chalk.port_in.mmap",
+                ))
+                .unwrap();
+
+            file.set_len(1024 * 1024 * 1024).unwrap();
+
+            let mmap = unsafe { Mmap::map(&file).unwrap() };
+
+            beam_io::BeamReader::new(mmap, &in_queue).read_loop();
         });
+
         s.spawn(|_| {
-            beam_io::BeamWriter::new(&mut stdout, out_recv).flush_loop();
+            let file = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(PathBuf::from(
+                    "/home/ostera/repos/github.com/ostera/erlang-gui/chalk.port_out.mmap",
+                ))
+                .unwrap();
+
+            file.set_len(1024 * 1024 * 1024).unwrap();
+
+            let mmap = unsafe { MmapMut::map_mut(&file).unwrap() };
+
+            beam_io::BeamWriter::new(mmap, out_recv).flush_loop();
         });
+
         compositor.run(should_exit.clone());
     });
 

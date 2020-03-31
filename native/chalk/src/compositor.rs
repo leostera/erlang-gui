@@ -2,7 +2,7 @@ extern crate crossbeam;
 
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crossbeam::queue::ArrayQueue;
 
@@ -41,8 +41,8 @@ impl<'a> Compositor<'a> {
     ) -> Compositor<'a> {
         let event_loop = EventLoop::<()>::with_user_event();
 
-        let w = 3840.0;
-        let h = 2160.0;
+        let w = 1920.0;
+        let h = 1080.0;
         let logical_size = LogicalSize::new(w, h);
 
         let visible_range = Rect {
@@ -127,7 +127,7 @@ impl<'a> Compositor<'a> {
             }
 
             Event::RedrawRequested(_windows_id) => {
-                if (current_frame_time - self.last_frame_request_time > 6) {
+                if current_frame_time - self.last_frame_request_time > 6 {
                     self.commands_out.send(CommandOut::RequestFrame);
                 }
 

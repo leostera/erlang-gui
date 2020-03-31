@@ -103,7 +103,7 @@ fanout(Event, #{ handlers := Table }) ->
 
 
 scale_coords({W, H}, {X, Y}) ->
-  MaxW = 3840,
-  MaxH = 2160,
+  MaxW = 1920,
+  MaxH = 1080,
   { round(MaxW/W * X), round(MaxH / H * Y) }.
 

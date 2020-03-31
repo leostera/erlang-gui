@@ -25,7 +25,7 @@
 
 initial_state() ->
   #{ nodes => chalk_node_tree:new()
-   , size => {3840, 2160}
+   , size => {1920, 1080}
    }.
 
 init(_Args) ->

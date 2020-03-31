@@ -18,3 +18,4 @@ winit = "0.21.0"
 erlang-etf =  { path = "../erlang-etf" }
 skia-safe = { path = "/home/ostera/repos/github.com/rust-skia/rust-skia/skia-safe", features = ["vulkan"] }
 skulpin = { path = "/home/ostera/repos/github.com/aclysma/skulpin" }
+memmap = "0.7.0"

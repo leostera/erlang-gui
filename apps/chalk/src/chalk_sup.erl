@@ -34,7 +34,7 @@ init([]) ->
 %%====================================================================
 
 supervision_flags() -> #{ strategy  => one_for_all
-                        , intensity => 5
+                        , intensity => 0
                         , period    => 2
                         }.
 

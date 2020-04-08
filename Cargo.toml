@@ -5,4 +5,5 @@ members = [
   "native/chalk",
   "native/erlang-binary-buffer",
   "native/erlang-fastmap",
+  "native/erlang-memmap",
 ]

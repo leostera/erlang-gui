@@ -195,6 +195,7 @@ dependencies = [
  "crossbeam-utils",
  "erlang-etf",
  "lazy_static",
+ "memmap",
  "num",
  "rustler 0.21.0",
  "skia-safe",
@@ -453,6 +454,14 @@ dependencies = [
 name = "erlang-fastmaps"
 version = "0.1.0"
 dependencies = [
+ "rustler 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "erlang-memmap"
+version = "0.1.0"
+dependencies = [
+ "memmap",
  "rustler 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

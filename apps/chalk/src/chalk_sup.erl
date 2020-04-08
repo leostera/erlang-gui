@@ -34,30 +34,33 @@ init([]) ->
 %%====================================================================
 
 supervision_flags() -> #{ strategy  => one_for_all
-                        , intensity => 0
-                        , period    => 2
+                        , intensity => 5
+                        , period    => 5
                         }.
 
 child_specs() ->
-  [ #{ id => chalk_event_server
+  [ #{ id => chalk_node_tree
+     , start => {chalk_node_tree, start_link, [none, []]}
+     , restart => permanent
+     , type => worker
+     , modules => [chalk_node_tree]
+     }
+  , #{ id => chalk_event_server
      , start => {chalk_event_server, start_link, [none, []]}
      , restart => permanent
-     , shutdown => brutal_kill
      , type => worker
      , modules => [chalk_event_server]
+     }
+  , #{ id => chalk_render_pipeline
+     , start => {chalk_render_pipeline, start_link, [none, []]}
+     , restart => permanent
+     , type => worker
+     , modules => [chalk_render_pipeline]
      }
   , #{ id => chalk_port
      , start => {chalk_port, start_link, [none, []]}
      , restart => permanent
-     , shutdown => brutal_kill
      , type => worker
      , modules => [chalk_port]
-     }
-  , #{ id => chalk_pipeline
-     , start => {chalk_pipeline, start_link, [none, []]}
-     , restart => permanent
-     , shutdown => brutal_kill
-     , type => worker
-     , modules => [chalk_pipeline]
      }
   ].

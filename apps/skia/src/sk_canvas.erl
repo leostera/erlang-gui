@@ -17,6 +17,10 @@
         , translate/3
         ]).
 
+-export([ draw_picture_at/3
+        , draw_pictures/2
+        ]).
+
 new(W, H) -> skia_native:sk_canvas__new(W, H).
 
 clear(C, Color) -> skia_native:sk_canvas__clear(C, Color).
@@ -45,4 +49,14 @@ draw_text_blob(C, Text, X, Y, Paint) -> skia_native:sk_canvas__draw_text_blob(C,
 
 draw_picture(C, Picture) -> skia_native:sk_canvas__draw_picture(C, Picture).
 
+
 clip_rect(C, W, H) when is_integer(W) and is_integer(H) -> skia_native:sk_canvas__clip_rect(C, W, H).
+
+draw_picture_at(C, {X, Y}, Picture) ->
+  translate(C, X, Y),
+  draw_picture(C, Picture),
+  translate(C, -X, -Y).
+
+draw_pictures(_, [])  -> ok;
+draw_pictures(C, Pictures=[_|_]) ->
+  skia_native:sk_canvas__draw_pictures(C, Pictures).

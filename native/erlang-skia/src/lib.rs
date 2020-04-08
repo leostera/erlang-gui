@@ -96,6 +96,7 @@ rustler::rustler_export_nifs! {
         ("sk_canvas__draw_paint", 2, sk_canvas__draw_paint),
         ("sk_canvas__draw_path", 3, sk_canvas__draw_path),
         ("sk_canvas__draw_picture", 2, sk_canvas__draw_picture),
+        ("sk_canvas__draw_pictures", 2, sk_canvas__draw_pictures),
         ("sk_canvas__draw_rect", 3, sk_canvas__draw_rect),
         ("sk_canvas__draw_round_rect", 5, sk_canvas__draw_round_rect),
         ("sk_canvas__draw_rrect", 3, sk_canvas__draw_rrect),
@@ -233,6 +234,25 @@ fn sk_canvas__draw_picture<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'
         .unwrap()
         .recording_canvas()
         .draw_picture(picture, None, None);
+
+    Ok(canvas_resource.encode(env))
+}
+
+fn sk_canvas__draw_pictures<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let canvas_resource: ResourceArc<CanvasResource> = args[0].decode()?;
+    let pictures_vector: Vec<((f32, f32, f32, i64), ResourceArc<PictureResource>)> =
+        args[1].decode()?;
+
+    let canvas = &mut canvas_resource.data.write().unwrap();
+
+    for ((_z, y, x, _ref), pic_res) in pictures_vector {
+        let picture = &*pic_res.data.read().unwrap();
+        canvas
+            .recording_canvas()
+            .translate((x, y))
+            .draw_picture(picture, None, None)
+            .translate((-x, -y));
+    }
 
     Ok(canvas_resource.encode(env))
 }

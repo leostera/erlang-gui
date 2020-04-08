@@ -8,6 +8,7 @@
          sk_canvas__draw_paint/2,
          sk_canvas__draw_path/3,
          sk_canvas__draw_picture/2,
+         sk_canvas__draw_pictures/2,
          sk_canvas__draw_rect/3,
          sk_canvas__draw_round_rect/5,
          sk_canvas__draw_rrect/3,
@@ -67,6 +68,7 @@ sk_canvas__draw_color(_C, _Color) -> ?NIF_ERROR.
 sk_canvas__draw_paint(_C, _Paint) -> ?NIF_ERROR.
 sk_canvas__draw_path(_C, _Path, _Paint) -> ?NIF_ERROR.
 sk_canvas__draw_picture(_C, _Picture) -> ?NIF_ERROR.
+sk_canvas__draw_pictures(_C, _Pictures) -> ?NIF_ERROR.
 sk_canvas__draw_rect(_C, _Rect, _Paint) -> ?NIF_ERROR.
 sk_canvas__draw_round_rect(_C, _Rect, _X, _Y, _Paint) -> ?NIF_ERROR.
 sk_canvas__draw_rrect(_C, _Rect, _Paint) -> ?NIF_ERROR.

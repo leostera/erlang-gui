@@ -136,7 +136,6 @@ do_foreach(F, #{ render := ZsTable
                , refs := RefTable
                , octree := Octree
                , cache := Cache }=State) ->
-  {T, _} = timer:tc(fun () ->
   cets:foldl(
     fun ({Ref, Fn}, _) ->
         case (catch Fn()) of
@@ -144,20 +143,15 @@ do_foreach(F, #{ render := ZsTable
           {new_frame, _, _, _}=Frame -> queue_new_frame(Ref, Frame, State);
           _ -> ok
           end
-    end, ok, RefTable)
-  end),
-  io:format("build z table: ~pμs\n", [T]),
-  {T1, Pictures} =
-    timer:tc(fun () ->
+    end, ok, RefTable),
+  Pictures =
       cets:fold(fun ({{Z, Y, X, _}, Pic}, {_, C}) ->
                      sk_canvas:draw_picture_at(C, {X, Y}, Pic),
                      {{Z, Y, X}, C}
                 end,
                 fun () -> {first, sk_canvas:new(1920, 1080)} end,
-                ZsTable)
-    end),
-  io:format("z octants draw: ~pμs\n", [T1]),
-  Frame = lists:foldl(fun ({I, {Pos, TempC}}, C) ->
+                ZsTable),
+  Frame = lists:foldl(fun ({I, {_Pos, TempC}}, C) ->
                           Idx = eu_octree:linear_idx_to_pair(I),
                           {_, {X,_}, {Y,_}} = eu_octree:limits(Idx, Octree),
                           Pic = sk_picture:from_canvas(TempC),
@@ -172,8 +166,10 @@ do_foreach(F, #{ render := ZsTable
   {reply, ok, State}.
 
 queue_cached_frame(Ref, Cache, ZsTable) ->
-  [{_, {LastPos, _LastDims, LastPic}}] = cets:lookup(Cache, Ref),
-  cets:insert(ZsTable, {key(LastPos, Ref), LastPic}).
+  case cets:lookup(Cache, Ref) of
+    [{_, {LastPos, _LastDims, LastPic}}] -> cets:insert(ZsTable, {key(LastPos, Ref), LastPic});
+    _ -> ok
+  end.
 
 queue_new_frame( Ref
                , {new_frame, {X, Y, Z}=NewPos, {W, H}, NewPic}

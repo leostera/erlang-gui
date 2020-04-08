@@ -63,8 +63,7 @@ initial_state() ->
 do_set_viewport_size(Size, State) -> {reply, ok, State#{ size => Size }}.
 
 do_flush(#{ size := {W, H}, node_tree := NodeTree }=State) ->
-  {T, Frame} = timer:tc(fun () -> chalk_render_pipeline:make_frame(NodeTree, {W, H}) end),
-  io:format("make_frame: ~pμs\n\n\n", [T]),
+  Frame = chalk_render_pipeline:make_frame(NodeTree, {W, H}),
   {reply, {ok, Frame}, State}.
 
 make_frame(NodeTree, {W, H}) ->

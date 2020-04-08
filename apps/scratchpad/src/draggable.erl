@@ -25,8 +25,8 @@ init(Args) ->
   State = initial_state(Args),
   Self = self(),
   chalk_event_server:register(Self),
-  chalk_pipeline:register(fun () -> {ok, {0.0,0.0,0.0}, hex_lib:bg()} end),
-  chalk_pipeline:register(fun () -> draggable:draw() end),
+  chalk:add_node(fun () -> {ok, {0.0,0.0,0.0}, hex_lib:bg()} end),
+  chalk:add_node(fun () -> draggable:draw() end),
   {ok, State}.
 
 terminate(_, _) -> ok.

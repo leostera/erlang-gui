@@ -58,7 +58,7 @@ initial_state(_) ->
    }.
 
 do_init(State) ->
-  chalk_pipeline:register(fun random_walk_line:draw/0),
+  chalk:add_node(fun random_walk_line:draw/0),
   State.
 
 do_draw(#{ pos := Pos

@@ -62,8 +62,8 @@ initial_state(_) ->
    }.
 
 do_init(State=#{ size := S }) ->
-  chalk_pipeline:register(fun () -> {ok, {0.0,0.0,0.0}, hex_lib:bg()} end),
-  chalk_pipeline:register(fun () -> random_walk:draw() end),
+  chalk:add_node(fun () -> {ok, {0.0,0.0,0.0}, hex_lib:bg()} end),
+  chalk:add_node(fun () -> random_walk:draw() end),
   Tile = hex_lib:flat_hex_tile(S),
   State#{ tile => Tile }.
 

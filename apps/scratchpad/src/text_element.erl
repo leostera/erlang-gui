@@ -39,7 +39,7 @@ draw(#{ dim := Dim={W,H}
   LineCount = lists:foldl(
    fun (<<"">>, Offset) -> Offset+1;
        (T, Offset) ->
-       TextBlob = sk_text_blob:from_binary(binary:bin_to_list(T), Font),
+       TextBlob = sk_text_blob:from_binary(T, Font),
        sk_canvas:draw_text_blob( Canvas
                                , TextBlob
                                , 0

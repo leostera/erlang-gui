@@ -11,14 +11,8 @@
 
 -export([ dump/0, restart/0, start/0 ]).
 
-start() ->
-  hex_grid:start_link([],[]),
-  chalk_pipeline:flush().
-
-restart() ->
-  gen_server:stop(hex_grid),
-  chalk_pipeline:clear(),
-  start().
+start() -> hex_grid:start_link([],[]).
+restart() -> gen_server:stop(hex_grid), start().
 
 %%==============================================================================
 %% Behavior callbacks
@@ -50,15 +44,14 @@ dump() -> gen_server:call(?MODULE, dump).
 %%==============================================================================
 
 initial_state(_) ->
-  #{ size => { 2000, 3000 }
-   , cell_size => 100
+  #{ size => { 1920, 1080 }
+   , cell_size => 20
    , cells => []
    }.
 
 do_init(State=#{ size := {W,H}, cell_size := S }) ->
   {Rows, Cols} = hex_lib:fit_tiles(S, W, H),
   Tiles = hex_lib:build_tiles(S, Rows, Cols),
-  chalk_pipeline:register(fun () -> {ok, {0.0,0.0,0.0}, hex_lib:bg()} end),
   Tile = hex_lib:flat_hex_tile(S),
   Cells = lists:map(
             fun (#{ logical := Log

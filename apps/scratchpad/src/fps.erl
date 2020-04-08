@@ -12,6 +12,7 @@
 -export([ draw/0
         , start/0
         , restart/0
+        , frame/1
         ]).
 
 %%==============================================================================
@@ -22,7 +23,7 @@ start_link(Args, Opts) ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, Args, Opts).
 
 init(_) ->
-  chalk_pipeline:register(fun ?MODULE:draw/0),
+  chalk:add_node(fun ?MODULE:draw/0),
   {ok, #{ time => erlang:system_time()
         , counter => 0
         , frame => frame(0)
@@ -56,7 +57,7 @@ do_draw(State=#{ time := T0, counter := C0, frame := F0 }) ->
                              false -> {F0, C0+1, T0}
                            end,
   { reply
-  , {new_frame, {0.0,90.0,0.0}, F1}
+  , chalk:new_frame({0.0,90.0,100.0}, {240, 80}, F1)
   , State#{ frame => F1
           , counter => C1
           , time => T1 }}.
@@ -81,7 +82,7 @@ frame(Count) ->
   sk_paint:set_color(TextPaint, color(Count)),
   Font = sk_font:default(),
   sk_font:set_size(Font, 40.0),
-  TextBlob = sk_text_blob:from_binary(Text, Font),
+  TextBlob = sk_text_blob:from_string(Text, Font),
   sk_canvas:draw_text_blob(Canvas, TextBlob, 25, 52, TextPaint),
 
   sk_picture:from_canvas(Canvas).

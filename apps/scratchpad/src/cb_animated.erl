@@ -12,7 +12,7 @@ start_link(_Args) ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, _Args, []).
 
 init(_Args) ->
-  {ok, Ref} = chalk_pipeline:register(fun () -> gen_server:call(?MODULE, draw) end),
+  {ok, Ref} = chalk:add_node(fun () -> gen_server:call(?MODULE, draw) end),
   {ok, #{ acc => {0, right}, ref => Ref }}.
 
 terminate(_, _) -> ok.

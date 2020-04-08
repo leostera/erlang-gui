@@ -26,7 +26,7 @@ init(Args) ->
   process_flag(priority, high),
   State = initial_state(Args),
   chalk_event_server:register(fun ?MODULE:handle_event/1),
-  chalk_pipeline:register(fun mouse_coords:draw/0),
+  chalk:add_node(fun mouse_coords:draw/0),
   {ok, State}.
 
 terminate(_, _) -> ok.
@@ -68,7 +68,7 @@ do_cursor_move({X, Y}, Ts, State) ->
   %io:format("mouse_coords:do_cursor_move/3:\t\t~pms (since event ocurred)\n\n", [(erlang:system_time() - Ts)/1000000]),
   { reply
   , ok
-  , State#{ pos => {X * 1.0, Y * 1.0, 1.0}
+  , State#{ pos => {X * 1.0, Y * 1.0, 100000.0}
           , last_event_time => Ts
           , crosshair => crosshair({X, Y, 0.0})
           }
@@ -99,7 +99,7 @@ crosshair({X, Y, _}) ->
 
   Font = sk_font:default(),
   Text = lists:flatten(io_lib:format("(~p,~p)", [round(X), round(Y)])),
-  TextBlob = sk_text_blob:from_binary(Text, Font),
+  TextBlob = sk_text_blob:from_string(Text, Font),
   sk_canvas:draw_text_blob(C, TextBlob, 50, 75, black_paint()),
   sk_picture:from_canvas(C).
 

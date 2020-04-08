@@ -9,9 +9,11 @@
         , handle_call/3
         ]).
 
--export([ draw/0
+-export([ draw/1
+        , dump/1
         , start/0
-        , restart/0
+        , start_n/1
+        , handle_event/2
         ]).
 
 %%==============================================================================
@@ -19,79 +21,69 @@
 %%==============================================================================
 
 start_link(Args, Opts) ->
-  gen_server:start_link({local, ?MODULE}, ?MODULE, Args, Opts).
+  gen_server:start_link(?MODULE, Args, Opts).
 
 init(Args) ->
   State = initial_state(Args),
-  chalk_pipeline:register(fun () -> {ok, {0.0,0.0,0.0}, hex_lib:bg()} end),
-  chalk_pipeline:register(fun () -> button:draw() end),
-  chalk_event_server:register(self()),
+  Self = self(),
+  {ok, NodeRef} = chalk:add_node(fun () -> button:draw(Self) end),
+  chalk_event_server:register(NodeRef, fun (E) -> ?MODULE:handle_event(Self, E) end),
   {ok, State}.
 
 terminate(_, _) -> ok.
 
 handle_call(draw, _From, State) -> do_draw(State);
+handle_call(dump, _From, State) -> {reply, State, State};
 handle_call(_Msg, _From, State) -> {noreply, State}.
 
-handle_cast({{type, mouse_input}, [{state,pressed}|_]}, State) ->
-  {noreply, do_click(State)};
-handle_cast({{type, mouse_input}, [{state,released}|_]}, State) ->
-  {noreply, do_unclick(State)};
-handle_cast({{type, cursor_moved}, [{x,X}, {y,Y}]}, State) ->
-  {noreply, do_update_cursor(State, {X,Y})};
-handle_cast(_Msg, State) ->
-  {noreply, State}.
+handle_cast({event, {Ts, _}}, State) ->
+  io:format("~pms to cast\n\n",[(erlang:system_time()-Ts)/1000000]),
+  {noreply, State};
+
+handle_cast(_Msg, State) -> {noreply, State}.
 
 %%==============================================================================
 %% Api
 %%==============================================================================
 
-start() ->
-  button:start_link([],[]),
-  chalk_pipeline:flush().
+start_n(0) -> ok;
+start_n(N) -> start(), start_n(N-1).
 
-restart() ->
-  gen_server:stop(button),
-  chalk_pipeline:clear(),
-  start().
+start() -> button:start_link([],[]).
 
-draw() -> gen_server:call(?MODULE, draw).
+draw(Self) -> gen_server:call(Self, draw).
+
+dump(Self) -> gen_server:call(Self, dump).
+
+handle_event(Self, Event={Ts,_}) ->
+  io:format("~pms to handle\n",[(erlang:system_time()-Ts)/1000000]),
+  gen_server:cast(Self, {event, Event}).
 
 %%==============================================================================
 %% Internal
 %%==============================================================================
 
 initial_state(_) ->
-  #{ hex => hex_lib:flat_hex_tile(100)
-   , pos => {1000.0, 1000.0, 1.0}
-   , dim => {100, 100}
-   , mouse_pos => {0.0, 0.0}
-   , status => unclicked
-   , time => erlang:system_time()
-   , on_click => fun (#{ mouse_pos := P}) -> io:format("click at ~p\n",[P]) end
+  #{ box => box()
+   , pos => {rand:uniform(1000)*1.0, rand:uniform(1000)*1.0, 1.0}
+   , dim => {rand:uniform(100)*1.0, rand:uniform(100)*1.0}
    }.
 
-do_click(State=#{ pos := {X, Y, _}
-                , dim := {W, H}
-                , mouse_pos := {MX, MY}
-                , on_click := Fn
-                }) ->
-  OnX = (X-W < MX) and (MX < X+W),
-  OnY = (Y-W < MY) and (MY < Y+H),
-  case OnX and OnY of
-    true -> State2 = State#{ status => clicked },
-            Fn(State2),
-            State2;
-    _ -> do_unclick(State)
-  end.
-
-do_unclick(S) -> S#{ status => unclicked }.
-
-do_update_cursor(State, Pos) -> State#{ mouse_pos => Pos }.
+box() ->
+  C = sk_canvas:new(100, 00),
+  R = sk_rect:make_xywh(0, 0, 100, 100),
+  P = line_paint(),
+  sk_canvas:draw_rect(C, R, P),
+  sk_picture:from_canvas(C).
 
 do_draw(#{ pos := Pos
-         , hex := Hex
-         , time := _
+         , dim := Dim
          }=State) ->
-  Now = erlang:system_time(),
-  {reply, {ok, Pos, Hex}, State#{ time => Now }}.
+  {reply, chalk:new_frame(Pos, Dim, box()), State}.
+
+line_paint() ->
+  Paint = sk_paint:new(),
+  sk_paint:set_style(Paint, sk_paint:style_stroke()),
+  sk_paint:set_stroke_width(Paint, 1.0),
+  sk_paint:set_color(Paint, sk_color:rgba(20,20,20,255)),
+  Paint.

@@ -36,7 +36,7 @@ start_link(Args, Opts) ->
 
 init(Args) ->
   State = initial_state(Args),
-  chalk_pipeline:register(fun ?MODULE:draw/0),
+  chalk:add_node(fun ?MODULE:draw/0),
   chalk_event_server:register(fun ?MODULE:print_event/1),
   {ok, State}.
 
@@ -206,7 +206,7 @@ field(FontHeight, Dim={W, H}, Text, TextElement, Status) ->
   sk_paint:set_stroke_width(DebugTextPaint, 1.0),
   sk_paint:set_color(DebugTextPaint, sk_color:rgba(233, 80, 80, 255)),
   DebugFont = sk_font:default(),
-  DebugTextBlob = sk_text_blob:from_binary(atom_to_list(Status), DebugFont),
+  DebugTextBlob = sk_text_blob:from_string(atom_to_list(Status), DebugFont),
   sk_canvas:draw_text_blob( Canvas
                           , DebugTextBlob
                           , W - 100

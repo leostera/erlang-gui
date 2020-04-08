@@ -22,7 +22,7 @@ start_link(Args, Opts) ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, Args, Opts).
 
 init(_) ->
-  chalk_pipeline:register(fun () -> bg:draw() end),
+  chalk:add_node(fun () -> bg:draw() end),
   {ok, none}.
 
 terminate(_, _) -> ok.
@@ -38,10 +38,7 @@ handle_cast(_Msg, State) -> {noreply, State}.
 
 start() -> bg:start_link([],[]).
 
-restart() ->
-  gen_server:stop(bg),
-  chalk_pipeline:clear(),
-  start().
+restart() -> gen_server:stop(bg), start().
 
 draw() -> gen_server:call(?MODULE, draw).
 
@@ -49,4 +46,4 @@ draw() -> gen_server:call(?MODULE, draw).
 %% Internal
 %%==============================================================================
 
-do_draw(State) -> {reply, {new_frame, {0.0,0.0,0.0}, hex_lib:bg()}, State}.
+do_draw(State) -> {reply, chalk:new_frame({0.0,0.0,0.0}, {0.0, 0.0}, hex_lib:bg()), State}.

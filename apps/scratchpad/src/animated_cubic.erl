@@ -58,8 +58,8 @@ initial_state(_) ->
    }.
 
 do_init(State) ->
-  chalk_pipeline:register(fun () -> {ok, {0.0,0.0,0.0}, hex_lib:bg()} end),
-  chalk_pipeline:register(fun () -> animated_cubic:draw() end),
+  chalk:add_node(fun () -> {ok, {0.0,0.0,0.0}, hex_lib:bg()} end),
+  chalk:add_node(fun () -> animated_cubic:draw() end),
   State.
 
 do_draw(#{ pos := Pos

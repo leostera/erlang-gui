@@ -38,33 +38,26 @@ supervision_flags() -> #{ strategy  => one_for_all
                         , period    => 5
                         }.
 
-child_specs() ->
-  [ #{ id => bg
-     , start => {bg, start, []}
-     , restart => permanent
-     , shutdown => brutal_kill
-     , type => worker
-     , modules => [bg]
-     }
-  , #{ id => fps
-     , start => {fps, start, []}
-     , restart => permanent
-     , shutdown => brutal_kill
-     , type => worker
-     , modules => [fps]
-     }
-  , #{ id => mouse_coords
-     , start => {mouse_coords, start, []}
-     , restart => permanent
-     , shutdown => brutal_kill
-     , type => worker
-     , modules => [mouse_coords]
-     }
-   , #{ id => text_field
-     , start => {text_field, start, []}
-     , restart => permanent
-     , shutdown => brutal_kill
-     , type => worker
-     , modules => [text_field]
-     }
-  ].
+child_specs() -> [].
+%  [ #{ id => bg
+%     , start => {bg, start, []}
+%     , restart => permanent
+%     , shutdown => brutal_kill
+%     , type => worker
+%     , modules => [bg]
+%     }
+%  , #{ id => fps
+%     , start => {fps, start, []}
+%     , restart => permanent
+%     , shutdown => brutal_kill
+%     , type => worker
+%     , modules => [fps]
+%     }
+%  , #{ id => mouse_coords
+%     , start => {mouse_coords, start, []}
+%     , restart => permanent
+%     , shutdown => brutal_kill
+%     , type => worker
+%     , modules => [mouse_coords]
+%     }
+%  ].

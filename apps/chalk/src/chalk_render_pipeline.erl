@@ -1,4 +1,4 @@
--module(chalk_pipeline).
+-module(chalk_render_pipeline).
 
 -behaviour(gen_server).
 
@@ -10,10 +10,7 @@
         , handle_cast/2
         ]).
 
--export([ register/1
-        , flush/0
-        , flush_many/0
-        , clear/0
+-export([ flush/0
         , dump/0
         , set_viewport_size/1
         , make_frame/2
@@ -23,33 +20,16 @@
 %% Behavior callbacks
 %%==============================================================================
 
-initial_state() ->
-  #{ nodes => chalk_node_tree:new()
-   , size => {1920, 1080}
-   }.
-
 init(_Args) ->
   process_flag(priority, high),
   {ok, initial_state()}.
 
 terminate(_, _) -> ok.
 
+handle_call(flush, _From, State) -> do_flush(State);
+handle_call({set_viewport_size, Size}, _From, State) -> do_set_viewport_size(Size, State);
 handle_call(dump, _From, State) -> {reply, State, State};
-
-handle_call({register, Fn}, _From, State) ->
-  {ok, Ref, NewState} = do_register(Fn, State),
-  {reply, {ok, Ref}, NewState};
-
-handle_call(flush, _From, State) ->
-  {ok, T, NewState} = do_flush(State),
-  {reply, T, NewState};
-
-handle_call(clear, _From, State) ->
-  ok = do_clear(State),
-  {reply, ok, State};
-
-handle_call({set_viewport_size, Size}, _From, State) ->
-  {reply, ok, State#{ size => Size }}.
+handle_call(_, _From, State) -> {noreply, State}.
 
 handle_cast(_Msg, State) -> {noreply, State}.
 
@@ -62,13 +42,7 @@ start_link(Args, Opts) -> gen_server:start_link({local, ?MODULE}, ?MODULE, Args,
 
 stop() -> gen_server:stop(?MODULE).
 
-clear() -> gen_server:call(?MODULE, clear).
-
 flush() -> gen_server:call(?MODULE, flush).
-
-flush_many() -> lists:foreach(fun chalk_pipeline:flush/0, lists:seq(0, 1000)).
-
-register(F) -> gen_server:call(?MODULE, {register, F}).
 
 dump() -> gen_server:call(?MODULE, dump).
 
@@ -81,25 +55,25 @@ set_viewport_size(Size={W, H}) when is_integer(W) and is_integer(H)
 %% Internal
 %%==============================================================================
 
-do_register(Fn, #{ nodes := Nodes }=State) ->
-  {ok, Ref} = chalk_node_tree:add(Fn, Nodes),
-  {ok, Ref, State}.
+initial_state() ->
+  #{ node_tree => gen_server:call(chalk_node_tree, dump, infinity)
+   , size => {1920, 1080}
+   }.
 
-do_clear(#{ nodes := Nodes }) ->
-  chalk_node_tree:clear(Nodes).
+do_set_viewport_size(Size, State) -> {reply, ok, State#{ size => Size }}.
 
-do_flush(#{ nodes := Nodes, size := {W, H} }=State) ->
-  Frame = chalk_pipeline:make_frame(Nodes, {W, H}),
-  {ok, Frame, State}.
+do_flush(#{ size := {W, H}, node_tree := NodeTree }=State) ->
+  {T, Frame} = timer:tc(fun () -> chalk_render_pipeline:make_frame(NodeTree, {W, H}) end),
+  io:format("make_frame: ~pμs\n\n\n", [T]),
+  {reply, {ok, Frame}, State}.
 
-make_frame(Nodes, {W, H}) ->
+make_frame(NodeTree, {W, H}) ->
   Canvas = sk_canvas:new(W, H),
   sk_canvas:clip_rect(Canvas, W, H),
-  chalk_node_tree:fold(
-    fun ({{X, Y, _Z}, Picture}) ->
-        sk_canvas:translate(Canvas, X, Y),
-        sk_canvas:draw_picture(Canvas, Picture),
-        sk_canvas:translate(Canvas, -X, -Y)
-    end, Nodes),
+  % Fold node tree into the current screen
+  chalk_node_tree:foreach(
+     fun (Pic) -> sk_canvas:draw_picture_at(Canvas, {0.0,0.0}, Pic) end
+   , NodeTree
+   ),
   Picture = sk_picture:from_canvas(Canvas),
   sk_picture:as_bytes(Picture).

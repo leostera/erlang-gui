@@ -2,7 +2,7 @@
 
 -define(SIZE_TAG_SIZE, 5).
 
--export([ open_port/3, loop/1 ]).
+-export([ open_port/3, port_close/1, loop/1 ]).
 
 %%==============================================================================
 %% Api
@@ -15,6 +15,8 @@ open_port(Owner, Path, FileSize) ->
                        io:format("ERROR: ~p\n\n\n", [Res])
                    end),
   {ok, Pid}.
+
+port_close(Pid) -> exit(Pid, kill).
 
 %%==============================================================================
 %% Internal
@@ -37,13 +39,11 @@ loop(#{ reader := R
       }=State) ->
   Now = erlang:system_time(),
   SizeTag = read_size_tag(R, Offset),
-  %io:format("STATE:\n~p\n\n\n", [State]),
   case SizeTag of
     locked -> memmap_port:loop(State#{ last_read_time => Now });
     {free, 0} -> memmap_port:loop(State#{ last_read_time => Now });
     {free, Size} ->
       {ok, Term} = read_term(R, Size, Offset+?SIZE_TAG_SIZE),
-      %io:format("TERM: ~p\n\n", [Term]),
       forward_data(Term, Owner, Now),
       NewState = State#{ last_read_time => Now
                        , last_term => Term

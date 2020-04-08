@@ -1,7 +1,10 @@
 -module(memmap).
 
+-compile({no_auto_import,[size/1]}).
+
 -export([ open_read/2
         , open_write/2
+        , zero/1
         , read/3
         , size/1
         , write/3
@@ -9,6 +12,10 @@
         ]).
 
 size(#{ size := Size }) -> Size.
+
+zero(Memmap) ->
+  Size = size(Memmap),
+  write(Memmap, << 0:Size >>, 0).
 
 open_read(Path, Size) when is_binary(Path)
                        and is_integer(Size) and (Size > 0) ->

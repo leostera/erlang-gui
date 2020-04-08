@@ -1,14 +1,16 @@
 #[macro_use]
 extern crate rustler;
 
-/*
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
-use rustler::{Encoder, Env, Error, ResourceArc, Term};
+use rustler::{
+    types::binary::{Binary, OwnedBinary},
+    Encoder, Env, Error, ResourceArc, Term,
+};
 use std::sync::RwLock;
 
 struct FastMap {
-    data: RwLock<HashMap<Term, Term>>,
+    data: RwLock<BTreeMap<(u32, u32, u32), Vec<u8>>>,
 }
 
 mod atoms {
@@ -16,17 +18,15 @@ mod atoms {
         atom ok;
         atom error;
         atom none;
-        //atom __true__ = "true";
-        //atom __false__ = "false";
     }
 }
 
 rustler::rustler_export_nifs! {
-    "fastmap",
+    "fastmap_native",
     [
-        ("new", 1, fastmap_new),
-        ("get", 2, fastmap_get),
-        ("set", 3, fastmap_set),
+        ("new", 0, fastmap_new),
+        ("insert", 3, fastmap_insert),
+        ("as_list", 1, fastmap_as_list),
     ],
     Some(on_init)
 }
@@ -36,41 +36,45 @@ fn on_init<'a>(env: Env<'a>, _load_info: Term<'a>) -> bool {
     true
 }
 
-fn fastmap_new<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
-    let fastmap_size: usize = args[0].decode()?;
-    let mut map = HashMap::new();
+fn fastmap_new<'a>(env: Env<'a>, _args: &[Term<'a>]) -> Result<Term<'a>, Error> {
     let fastmap_struct = FastMap {
-        data: RwLock::new(map),
+        data: RwLock::new(BTreeMap::new()),
     };
 
     Ok(ResourceArc::new(fastmap_struct).encode(env))
 }
 
-fn fastmap_get<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
-    let map: ResourceArc<FastMap> = args[0].decode()?;
-    let key: Term = args[1].decode()?;
+fn fastmap_as_list<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let resource: ResourceArc<FastMap> = args[0].decode()?;
 
-    let res = match map.data.read() {
-        Ok(m) => match m.get(key) {
-            Some(term) => term
-            None => atoms::none()
-        },
-        _ => atoms::none(),
+    let res = match resource.data.read() {
+        Ok(map) => map
+            .keys()
+            .cloned()
+            .map(|k| {
+                let v = map.get(&k).unwrap();
+                let mut bin = OwnedBinary::new(v.len()).unwrap();
+                bin.copy_from_slice(&v);
+                (k, Binary::from_owned(bin, env))
+            })
+            .collect(),
+        _ => vec![],
     };
 
     Ok(res.encode(env))
 }
 
-fn fastmap_set<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+fn fastmap_insert<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
     let map: ResourceArc<FastMap> = args[0].decode()?;
-    let key: Term<'a> = args[1].decode()?;
-    let value: Term<'a> = args[2].decode()?;
+    let key: (u32, u32, u32) = args[1].decode()?;
+    let value: Binary = args[2].decode()?;
 
     match map.data.write() {
-        Ok(mut m) => m.set(key, value),
+        Ok(mut m) => {
+            m.insert(key, value.to_vec());
+        }
         _ => (),
     };
 
     Ok(map.encode(env))
 }
-*/
